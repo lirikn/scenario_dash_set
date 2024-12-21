@@ -1,0 +1,273 @@
+[
+    {
+        "name": "LED_Controller",
+        "topic": "LED_Controller",
+        "states": ["1", "4", "10"],
+        "commands": ["1", "4", "10"],
+        "features": {
+            "1": {
+                "name": "Свет в коридоре",
+                "type": "int",
+                "room": "Коридор"
+            },
+            "4": {
+                "name": "Свет над телевизором",
+                "type": "int",
+                "room": "Спальня"
+            },
+            "10": {
+                "name": "Свет над кроватью",
+                "type": "int",
+                "room": "Спальня"
+            }
+        }
+    },
+    {
+        "name": "Sonoff_4CH",
+        "topic": "Sonoff_4CH",
+        "states": ["POWER1", "POWER2", "POWER3", "TIME_OF_DAY", "RF"],
+        "commands": ["POWER1", "POWER2", "POWER3", "RF"],
+        "features": {
+            "POWER3": {
+                "name": "Свет в ванной",
+                "room": "Санузел",
+                "type": "enum",
+                "values": ["ON", "OFF"]
+            },
+            "POWER1": {
+                "name": "Люстра в спальне",
+                "room": "Спальня",
+                "type": "enum",
+                "values": ["ON", "OFF"]
+            },
+            "POWER2": {
+                "name": "Свет в гардеробе",
+                "room": "Детская",
+                "type": "enum",
+                "values": ["ON", "OFF"]
+            },
+            "TIME_OF_DAY": {
+                "name": "Время суток",
+                "type": "enum",
+                "values": ["DAY", "NIGHT"]
+            },
+            "RF": {
+                "name": "RF",
+                "type": "str"
+            }
+        }
+    },
+    {
+        "name": "RF Switch",
+        "topic": "Tuya/31110200d8f15b07e8b7",
+        "states": ["switch_1"],
+        "commands": ["switch_1"],
+        "features": {
+            "switch_1": {
+                "name": "Рэле",
+                "room": "Балкон",
+                "type": "bool"
+            }
+        }
+    },
+    {
+        "name": "Temperature Humidity Sensor",
+        "topic": "Tuya/a4c1389a53a569b1",
+        "room": "Балкон",
+        "features": {
+            "temp_current": {
+                "name": "Температура",
+                "type": "float"
+            },
+            "humidity_value": {
+                "name": "Влажность",
+                "type": "float"
+            },
+            "battery_percentage": {
+                "name": "Заряд батареи",
+                "type": "float"
+            }
+        },
+        "states": [
+            "battery_percentage",
+            "temp_current",
+            "humidity_value"
+        ]
+    },
+    {
+        "name": "PSW-1CH-ZT2S",
+        "topic": "Tuya/a4c1388a128709ce",
+        "room": "Балкон",
+        "features": {
+            "switch_1": {
+                "name": "Реле",
+                "type": "bool"
+            }
+        },
+        "states": ["switch_1"],
+        "commands": ["switch_1"]
+    },
+    {
+        "name": "Motion Sensor",
+        "topic": "Tuya/a4c13836d23e8d81",
+        "room": "Коридор",
+        "features": {
+            "pir_state": {
+                "name": "Движение",
+                "type": "enum",
+                "values": [
+                    "pir",
+                    "none"
+                ]
+            },
+            "battery_percentage": {
+                "name": "Заряд батареи",
+                "type": "float"
+            }
+        },
+        "states": [
+            "battery_percentage",
+            "pir_state"
+        ]
+    },
+    {
+        "name": "Aubess Smart Socket 20A/zEM",
+        "topic": "Tuya/a4c138274279f8ba",
+        "room": "Балкон",
+        "features": {
+            "switch_1": {
+                "name": "Включено",
+                "type": "bool"
+            },
+            "child_lock": {
+                "name": "Блокировка кнопки",
+                "type": "bool"
+            },
+            "cur_voltage": {
+                "name": "Напряжение",
+                "type": "float"
+            },
+            "cur_current": {
+                "name": "Сила тока",
+                "type": "float"
+            },
+            "cur_power": {
+                "name": "Мощность",
+                "type": "float"
+            },
+            "add_ele": {
+                "name": "Энергия",
+                "type": "float"
+            },
+            "countdown_1": {
+                "name": "Таймер",
+                "type": "float"
+            }
+        },
+        "commands": [
+            "switch_1", "child_lock", "countdown_1"
+        ],
+        "states": [
+            "switch_1",
+            "child_lock",
+            "countdown_1",
+            "cur_voltage",
+            "cur_current",
+            "cur_power",
+            "add_ele"
+        ]
+    },
+    {
+        "name": "Датчик открытия двери",
+        "room": "Прихожая",
+        "topic": "Tuya/a4c138a5be018a73",
+        "features": {
+            "doorcontact_state": {
+                "name": "Дверь открыта",
+                "type": "bool"
+            },
+            "temper_alarm": {
+                "name": "Корпус вскрыт",
+                "type": "bool"
+            },
+            "battery_percentage": {
+                "name": "Заряд батареи",
+                "type": "float"
+            }
+        },
+        "states": [
+            "doorcontact_state",
+            "temper_alarm",
+            "battery_percentage"
+        ]
+    },
+    {
+        "name": "Датчик движения",
+        "room": "Спальня",
+        "topic": "Tuya/a4c138c7c55104fc",
+        "features": {
+            "pir_state": {
+                "name": "Движение",
+                "type": "enum",
+                "values": [
+                    "pir",
+                    "none"
+                ]
+            },
+            "battery_percentage": {
+                "name": "Заряд батареи",
+                "type": "float"
+            }
+        },
+        "states": [
+            "battery_percentage",
+            "pir_state"
+        ]
+    },
+    {
+        "name": "Энергометр(AT4P)",
+        "topic": "Tuya/04837c41bc407187",
+        "features": {
+            "switch_1": {
+                "name": "Включено",
+                "type": "bool"
+            },
+            "cpu_temp": {
+                "name": "Температура CPU",
+                "type": "float"
+            },
+            "cur_voltage": {
+                "name": "Напряжение",
+                "type": "float"
+            },
+            "cur_current": {
+                "name": "Сила тока",
+                "type": "float"
+            },
+            "cur_power": {
+                "name": "Мощность",
+                "type": "float"
+            },
+            "ele": {
+                "name": "Энергия",
+                "type": "float"
+            },
+            "countdown_1": {
+                "name": "Таймер",
+                "type": "float"
+            }
+        },
+        "commands": [
+            "switch_1", "countdown_1"
+        ],
+        "states": [
+            "switch_1",
+            "countdown_1",
+            "cur_voltage",
+            "cur_current",
+            "cur_power",
+            "ele",
+            "cpu_temp"
+        ]
+    }
+]
