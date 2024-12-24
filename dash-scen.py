@@ -10,7 +10,7 @@ app.layout = html.Div([
     dbc.Row([
         dcc.Input(
             placeholder='Название сценария',
-            id='scen-input',
+            id='scene-input',
             debounce=True,
             value=None,
             style={'width': '300px'}
@@ -23,20 +23,20 @@ app.layout = html.Div([
         )
     ]),
     html.Div(id='dynamic-row-container-div', children=[]),
+    html.Div(id='dynamic-then-container-div', children=[])
 ])
 
 @callback(
     Output('dynamic-row-container-div', 'children'),
-    [Input('scen-input', 'value'),
+    [Input('scene-input', 'value'),
      Input({'type': 'todo-dynamic-dropdown', 'index': ALL}, 'value')],
     State({'type': 'todo-dynamic-dropdown', 'index': ALL}, 'id'),
     prevent_initial_call=True
 )
 def display_row(value, todos, ids):
+    if value == '':
+        return []
     patched_children = Patch()
-    if value is None:
-        patched_children.clean()
-        return patched_children
     n_row = 0
     then = 0
     for (i, todo) in enumerate(todos):
@@ -44,16 +44,14 @@ def display_row(value, todos, ids):
             del patched_children[then]
             if todo == 'ТОГДА':
                 return patched_children
-            print(todo, i)
             continue
         if todo is None:
-            del patched_children[i+1]
+            del patched_children[i]
             return patched_children
         n_row = ids[i]['index'] + 1
         if todo == 'ТОГДА':
             then = i + 1
-
-
+    del patched_children[len(ids)]
     new_element = dbc.Row([
         dcc.Dropdown(
             id={
@@ -93,6 +91,14 @@ def display_row(value, todos, ids):
             style={'width': '100px'}
         )
     ])
+    if then > 0:
+        new_element = html.Div([
+           dcc.Dropdown(
+                id='then-dropdown',
+                options=['Устройство', 'Сценарий', 'Задержка'],
+                style={'width': '250px'}
+           )
+        ])
     patched_children.append(new_element)
     return patched_children
 
@@ -148,6 +154,32 @@ def display_value(feature, device, id_):
 )
 def display_todo(input_):
      return input_ is None
+
+@callback(
+    Output('dynamic-then-container-div', 'children'),
+    Input('then-dropdown', 'value'),
+    prevent_initial_call=True
+)
+def display_then(value):
+    if value is None:
+        return
+    patched_children = Patch()
+    n_row = 0
+    new_element = dbc.Row([
+        dcc.Dropdown(
+            id={
+                'type': 'device-commands-dropdown',
+                'index': n_row
+            },
+            options=[{'label': x['name'], 'value': devices.index(x)}
+                     for x in devices if 'commands' in x],
+            value=None,
+            style={'width': '250px'}
+        )
+    ])
+    patched_children.append(new_element)
+    return patched_children
+
 
 if __name__ == '__main__':
     app.run_server(debug=True, use_reloader=True)
