@@ -7,27 +7,53 @@ with open('config.json') as json_file:
 
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.layout = html.Div([
-    html.Button("Add row", id="dynamic-add-btn", n_clicks=0),
+    dbc.Row([
+        dcc.Input(
+            placeholder='Название сценария',
+            id='scen-input',
+            debounce=True,
+            value=None,
+            style={'width': '300px'}
+        ),
+        html.Button("сохранить",
+            id="save-btn",
+            disabled=True,
+            n_clicks=0,
+            style={'width': '100px'}
+        )
+    ]),
     html.Div(id='dynamic-row-container-div', children=[]),
 ])
 
 @callback(
     Output('dynamic-row-container-div', 'children'),
-#    [Input('dynamic-add-btn', 'n_clicks'),
-    Input({'type': 'todo-dynamic-dropdown', 'index': ALL}, 'value'),
-    State({'type': 'todo-dynamic-dropdown', 'index': ALL}, 'id')
+    [Input('scen-input', 'value'),
+     Input({'type': 'todo-dynamic-dropdown', 'index': ALL}, 'value')],
+    State({'type': 'todo-dynamic-dropdown', 'index': ALL}, 'id'),
+    prevent_initial_call=True
 )
-def display_row(todos, ids):
+def display_row(value, todos, ids):
     patched_children = Patch()
-    print(todos, ids)
-    n_row = len(ids)
+    if value is None:
+        patched_children.clean()
+        return patched_children
+    n_row = 0
+    then = 0
     for (i, todo) in enumerate(todos):
-        id_ = ids[i]['index'] + 1
+        if then > 0:
+            del patched_children[then]
+            if todo == 'ТОГДА':
+                return patched_children
+            print(todo, i)
+            continue
         if todo is None:
-            del patched_children[id_]
+            del patched_children[i+1]
             return patched_children
-        else:
-            n_row = id_
+        n_row = ids[i]['index'] + 1
+        if todo == 'ТОГДА':
+            then = i + 1
+
+
     new_element = dbc.Row([
         dcc.Dropdown(
             id={
