@@ -26,7 +26,22 @@ app.layout = html.Div([
 ])
 
 def new_then_row(n_row):
-    return 
+    return dbc.Row(
+        id={
+            'type': 'then-dynamic-row',
+            'index': n_row
+        },
+        children=[
+            dcc.Dropdown(
+                id={
+                    'type': 'then-dropdown',
+                    'index': n_row
+                },
+                options=['Устройство', 'Сценарий', 'Задержка'],
+                style={'width': '130px'}
+            )
+        ]
+    )
 
 @callback(
     Output('dynamic-row-container-div', 'children'),
@@ -96,23 +111,10 @@ def display_row(value, todos, ids):
     if then > 0:
         new_element = html.Div(
            id='dynamic-then-container-div',
-           children=[dbc.Row(
-               id={
-                   'type': 'then-dynamic-row',
-                   'index': 0
-               },
-               children=[
-                   dcc.Dropdown(
-                       id={
-                           'type': 'then-dropdown',
-                           'index': 0
-                       },
-                       options=['Устройство', 'Сценарий', 'Задержка'],
-                       style={'width': '150px'}
-                   )
-               ]
-           )
-        ])
+           children=[
+               new_then_row(0)
+           ]
+        )
     patched_children.append(new_element)
     return patched_children
 
@@ -172,27 +174,54 @@ def display_todo(input_):
 @callback(
     Output({'type': 'then-dynamic-row', 'index': MATCH}, 'children'),
     Input({'type': 'then-dropdown', 'index': MATCH}, 'value'),
+    State({'type': 'then-dropdown', 'index': MATCH}, 'id'),
     prevent_initial_call=True
 )
-def display_then(value):
-    print(value)
+def display_then(value, id_):
     patched_children = Patch()
     if value is None:
         del patched_children[1]
+        del patched_children[1]
         return patched_children
-    n_row = 0
-    new_element = dcc.Dropdown(
-        id={
-            'type': 'device-commands-dropdown',
-            'index': n_row
-        },
-        options=[{'label': x['name'], 'value': devices.index(x)}
-             for x in devices if 'commands' in x],
-        value=None,
-        style={'width': '250px'}
-    )
-    patched_children.append(new_element)
+    if value == 'Устройство':
+        patched_children[1] = dcc.Dropdown(
+            id={
+                'type': 'device-commands-dropdown',
+                'index': id_['index']
+            },
+            options=[{'label': x['name'], 'value': devices.index(x)}
+                 for x in devices if 'commands' in x],
+            value=None,
+            style={'width': '200px'}
+        )
+        patched_children[2] = html.Div(
+            id={
+                'type': 'then-commands-div',
+                'index': id_['index']
+            },
+            children=[],
+            style={'width': '250px'}
+        )
     return patched_children
+
+@callback(
+    Output({'type': 'then-commands-div', 'index': MATCH}, 'children'),
+    Input({'type': 'device-commands-dropdown', 'index': MATCH}, 'value'),
+    State({'type': 'then-commands-div', 'index': MATCH}, 'id'),
+    prevent_initial_call=True
+)
+def display_then_div(device, id_):
+
+    return dcc.Dropdown(
+            id={
+                'type': 'then-commands-dropdown',
+                'index': id_['index']
+            },
+            options=[{'label': devices[device]['features'][x]['name'], 'value': x}
+                     for x in devices[device]['commands']],
+            value=None,
+            style={'width': '250px'}
+        )
 
 
 if __name__ == '__main__':
