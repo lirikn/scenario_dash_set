@@ -35,7 +35,7 @@ def if_row_create(n_row):
             options=[{'label': x['name'], 'value': devices.index(x)}
                      for x in devices if 'states' in x],
 #            value=2,
-            style={'width': '250px'}
+            style={'width': '200px'}
         ),
         html.Div(
             id={
@@ -43,7 +43,7 @@ def if_row_create(n_row):
                 'index': n_row
             },
             children=[],
-            style={'width': '250px'}
+            style={'width': '200px'}
         ),
         html.Div(
             id={
@@ -53,13 +53,14 @@ def if_row_create(n_row):
             children=[],
             style={'width': '100px'}
         ),
-        html.Div(
+        dcc.Dropdown(
             id={
-                'type': 'if-todo-div',
+                'type': 'if-todo-dropdown',
                 'index': n_row
             },
-            children=[],
-            style={'width': '100px'}
+            options=['И', 'ИЛИ', 'ТОГДА'],
+            style={'width': '100px'},
+            disabled=True
         )
     ])
 
@@ -126,23 +127,15 @@ def display_if_value(feature, device, id_):
     )]
 
 @callback(
-    Output({'type': 'if-todo-div', 'index': MATCH}, 'children'),
+    Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'disabled'),
     Input({'type': 'if-value-input', 'index': MATCH}, 'value'),
-    State({'type': 'if-value-input', 'index': MATCH}, 'id'),
-#    prevent_initial_call=True
+#    State({'type': 'if-value-input', 'index': MATCH}, 'id'),
+    prevent_initial_call=True
 )
-def display_if_todo(value, id_):
-    print(value)
-    if value is None:
-        return []
-    return [dcc.Dropdown(
-        id={
-            'type': 'if-todo-dropdown',
-            'index': id_['index']
-        },
-        style={'width': '100px'},
-        options=['И', 'ИЛИ', 'ТОГДА']
-    )]
+def display_if_todo(value):
+    if value is None or value == '':
+        return True
+    return False
 
 if __name__ == '__main__':
     app.run_server(debug=True, use_reloader=True)

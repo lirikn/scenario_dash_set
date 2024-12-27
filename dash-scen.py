@@ -147,8 +147,8 @@ def display_value(feature, device, id_):
                 'type': 'value-dynamic-input',
                 'index': id_['index']
             },
-            options=devices[device]['features'][feature].get('values', ['True', 'False']),
-            style={'width': '80px'}
+            options=devices[device]['features'][feature].get('values', ['True', 'False'])
+#            style={'width': '80px'}
         )]
     else:
         children = [dcc.Input(
@@ -158,8 +158,8 @@ def display_value(feature, device, id_):
             },
             placeholder='>1',
 #            debounce=True,
-            value=None,
-            style={'width': '80px'}
+            value=None
+#            style={'width': '80px'}
         )]
     return children
 
