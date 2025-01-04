@@ -129,19 +129,22 @@ app.layout = html.Div([
             id='scene-input',
             debounce=True,
             value ='',
-            style={'width': '250px'}
+#            style={'width': '250px'}
+            style={'width': '50%'}
         ),
         html.Button("сохранить",
             id="save-btn",
             disabled=True,
             n_clicks=0,
-            style={'width': '100px'}
+#            style={'width': '100px'}
+            style={'width': '25%'}
         ),
         html.Button("загрузить",
             id="load-btn",
 #            disabled=True,
             n_clicks=0,
-            style={'width': '100px'}
+#            style={'width': '100px'}
+            style={'width': '25%'}
         )
     ]),
     html.Div(

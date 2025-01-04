@@ -48,25 +48,50 @@ def if_row_create(n_row):
     ])
 
 def then_todo_create(n_row):
-    return html.Div(
-        id={
-            'type': 'then-todo-div',
-            'index': n_row
-        },
-        children=[
-            dcc.Dropdown(
-                placeholder='Действие',
-                id={
-                    'type': 'then-todo-dropdown',
-                    'index': n_row
-                },
-                options=['Устройство', 'Задержка', 'Сценарий'],
-                value=None,
-                clearable=False,
-                style={'width': '150px'}
-            )
-        ]
-    )
+    return dbc.Row([
+        html.Div(
+            id={
+                'type': 'then-todo-div',
+                'index': n_row
+            },
+            children=[
+                dcc.Dropdown(
+                    placeholder='Действие',
+                    id={
+                        'type': 'then-todo-dropdown',
+                        'index': n_row
+                    },
+                    options=['Устройство', 'Задержка', 'Сценарий'],
+                    value=None,
+                    clearable=False,
+                    style={'width': '110px'}
+                )
+            ],
+            style={'width': '110px'}
+        ),
+        html.Div(
+            id={
+                'type': 'then-device-div',
+                'index': n_row
+            },
+            style={'width': '180px'}
+        ),
+        html.Div(
+            id={
+                'type': 'then-feature-div',
+                'index': n_row
+            },
+            style={'width': '180px'}
+        ),
+        html.Div(
+            id={
+                'type': 'then-value-div',
+                'index': n_row
+            },
+            children=[],
+            style={'width': '70px'}
+        )
+    ])
 
 
 def then_row_create(n_row):
@@ -225,14 +250,24 @@ def display_if_container_div(values, ids, children):
     return children
 
 @callback(
-    Output({'type': 'then-todo-div', 'index': MATCH}, 'children'),
+    Output({'type': 'then-device-div', 'index': MATCH}, 'children'),
     Input({'type': 'then-todo-dropdown', 'index': MATCH}, 'value'),
     State({'type': 'then-todo-dropdown', 'index': MATCH}, 'id'),
     prevent_initial_call=True
 )
 def display_then_container_div(value, id_):
     if value == 'Устройство':
-        return then_row_create(id_['index'])
+        return dcc.Dropdown(
+            id={
+                'type': 'then-device-dropdown',
+                'index': id_['index']
+            },
+            options=[{'label': x['name'], 'value': devices.index(x)}
+                     for x in devices if 'commands' in x],
+            clearable=False,
+            style={'width': '180px'}
+        )
+
 
 @callback(
     Output({'type': 'then-feature-div', 'index': MATCH}, 'children'),
@@ -241,6 +276,8 @@ def display_then_container_div(value, id_):
     prevent_initial_call=True
 )
 def display_then_feature(device, id_):
+    if device is None:
+        return
     options, disabled = [], True
     if device is not None:
         options, disabled = [{'label': devices[device]['features'][x]['name'], 'value': x}
@@ -252,7 +289,8 @@ def display_then_feature(device, id_):
         },
         options=options,
         clearable=False,
-        disabled=disabled
+        disabled=disabled,
+        style={'width': '180px'}
     )]
 
 @callback(
@@ -263,6 +301,8 @@ def display_then_feature(device, id_):
     prevent_initial_call=True
 )
 def display_then_value(feature, device, id_):
+    if feature is None:
+        return
     disabled = True
     id = {
         'type': 'then-value-input',
@@ -272,14 +312,14 @@ def display_then_value(feature, device, id_):
         if devices[device]['features'][feature]['type'] in ('bool', 'enum'):
             return [dcc.Dropdown(
                 id=id,
-                style={'width': '80px'},
+                style={'width': '70px'},
                 clearable=False,
                 options=devices[device]['features'][feature].get('values', ['True', 'False'])
             )]
         disabled = False
     return [dcc.Input(
         id=id,
-        style={'width': '80px'},
+        style={'width': '70px'},
 #        placeholder='>1',
         value=None,
         disabled=disabled
@@ -293,7 +333,7 @@ def display_then_value(feature, device, id_):
     [State({'type': 'then-todo-dropdown', 'index': ALL}, 'id'),
      State({'type': 'then-button-', 'index': ALL}, 'id'),
      State('then-row-container-div', 'children')],
-#    prevent_initial_call=True
+    prevent_initial_call=True
 )
 def display_then_container_div(values, del_clicks, add_clicks, ids, ids_row, children):
 
@@ -305,16 +345,16 @@ def display_then_container_div(values, del_clicks, add_clicks, ids, ids_row, chi
 
     print(add_clicks)
     if 1 in del_clicks:
-        del_row(ids_row[del_clicks.index(1)]['index'])
-        if not ids:
-            children.append(then_todo_create(ids_row[-1]['index'] + 1))
+#        del_row(ids_row[del_clicks.index(1)]['index'])
+#        if not ids:
+#            children.append(then_todo_create(ids_row[-1]['index'] + 1))
         return children
     if len(values) < len(ids_row):
         return children
-    if None in values and ids:
-        del_row(ids[0]['index'])
-    elif None not in values and not ids:
-        children.append(then_todo_create(ids_row[-1]['index'] + 1))
+#    if None in values and ids:
+#        del_row(ids[0]['index'])
+#    elif None not in values and not ids:
+#        children.append(then_todo_create(ids_row[-1]['index'] + 1))
     return children
 
 @callback(
