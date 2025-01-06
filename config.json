@@ -1,6 +1,7 @@
 [
     {
         "name": "LED_Controller",
+        "mac": "18FE34A2CD07",
         "topic": "LED_Controller",
         "states": ["1", "4", "10"],
         "commands": ["1", "4", "10"],
@@ -24,6 +25,7 @@
     },
     {
         "name": "Sonoff_4CH",
+        "mac": "60:01:94:85:01:B7",
         "topic": "Sonoff_4CH",
         "states": ["POWER1", "POWER2", "POWER3", "TIME_OF_DAY", "RF"],
         "commands": ["POWER1", "POWER2", "POWER3", "RF"],
@@ -59,6 +61,7 @@
     },
     {
         "name": "RF Switch",
+        "mac": "31110200d8f15b07e8b7",
         "topic": "Tuya/31110200d8f15b07e8b7",
         "states": ["switch_1"],
         "commands": ["switch_1"],
@@ -71,7 +74,8 @@
         }
     },
     {
-        "name": "Temperature Humidity Sensor",
+        "name": "Датчик температуры",
+        "mac": "a4c1389a53a569b1",
         "topic": "Tuya/a4c1389a53a569b1",
         "room": "Балкон",
         "features": {
@@ -96,6 +100,7 @@
     },
     {
         "name": "PSW-1CH-ZT2S",
+        "mac": "a4c1388a128709ce",
         "topic": "Tuya/a4c1388a128709ce",
         "room": "Балкон",
         "features": {
@@ -108,7 +113,8 @@
         "commands": ["switch_1"]
     },
     {
-        "name": "Motion Sensor",
+        "name": "Датчик движения",
+        "mac": "a4c13836d23e8d81",
         "topic": "Tuya/a4c13836d23e8d81",
         "room": "Коридор",
         "features": {
@@ -131,7 +137,8 @@
         ]
     },
     {
-        "name": "Aubess Smart Socket 20A/zEM",
+        "name": "Розетка 20А",
+        "mac": "a4c138274279f8ba",
         "topic": "Tuya/a4c138274279f8ba",
         "room": "Балкон",
         "features": {
@@ -179,6 +186,7 @@
     },
     {
         "name": "Датчик открытия двери",
+        "mac": "a4c138a5be018a73",
         "room": "Прихожая",
         "topic": "Tuya/a4c138a5be018a73",
         "features": {
@@ -203,6 +211,7 @@
     },
     {
         "name": "Датчик движения",
+        "mac": "a4c138c7c55104fc",
         "room": "Спальня",
         "topic": "Tuya/a4c138c7c55104fc",
         "features": {
@@ -226,6 +235,7 @@
     },
     {
         "name": "Энергометр(AT4P)",
+        "mac": "04837c41bc407187",
         "topic": "Tuya/04837c41bc407187",
         "features": {
             "switch_1": {
