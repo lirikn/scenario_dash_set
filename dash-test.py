@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, Patch, callback
+from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, Patch, callback, no_update
 import dash_bootstrap_components as dbc
 import json
 
@@ -7,15 +7,18 @@ with open('config.json') as json_file:
 
 def if_row_create(n_row):
     return dbc.Row([
-        dcc.Dropdown(
-            id={
-                'type': 'if-device-dropdown',
-                'index': n_row
-            },
-            options=[{'label': x['name'], 'value': devices.index(x)}
+        html.Div([
+            dcc.Dropdown(
+                id={
+                    'type': 'if-device-dropdown',
+                    'index': n_row
+                },
+                options=[{'label': x['name'], 'value': devices.index(x)}
                      for x in devices if 'states' in x],
-#            value=2,
-            clearable=False,
+                clearable=False,
+                searchable=False,
+                style={'width': '178px'}
+            )],
             style={'width': '180px'}
         ),
         html.Div(
@@ -34,123 +37,161 @@ def if_row_create(n_row):
             children=[],
             style={'width': '80px'}
         ),
-        dcc.Dropdown(
-            id={
-                'type': 'if-todo-dropdown',
-                'index': n_row
-            },
-            options=['И', 'ИЛИ', 'ТОГДА', 'удалить'],
-            value='ТОГДА',
-            style={'width': '100px'},
-            clearable=False,
-            disabled=True
-        )
-    ])
+        html.Div([
+            dcc.Dropdown(
+                id={
+                    'type': 'if-todo-dropdown',
+                    'index': n_row
+                },
+                options=['И', 'ИЛИ', 'ТОГДА', 'удалить'],
+                value='ТОГДА',
+                style={'width': '100px'},
+                clearable=False,
+                searchable=False,
+                disabled=True
+            )],
+            style={'width': '100px'}
+        )],
+#        style={'width': '540px'}
+    )
 
-def then_todo_create(n_row):
-    return dbc.Row([
-        html.Div(
-            id={
-                'type': 'then-todo-div',
-                'index': n_row
-            },
-            children=[
+def then_row_create(todo, n_row):
+    rows = {
+        'Устройство': [
+            html.Div([
                 dcc.Dropdown(
-                    placeholder='Действие',
                     id={
-                        'type': 'then-todo-dropdown',
+                        'type': 'then-device-dropdown',
                         'index': n_row
                     },
-                    options=['Устройство', 'Задержка', 'Сценарий'],
-                    value=None,
+                    options=[{'label': x['name'], 'value': devices.index(x)}
+                         for x in devices if 'commands' in x],
                     clearable=False,
-                    style={'width': '110px'}
-                )
-            ],
-            style={'width': '110px'}
-        ),
-        html.Div(
-            id={
-                'type': 'then-device-div',
-                'index': n_row
-            },
-            style={'width': '180px'}
-        ),
-        html.Div(
-            id={
-                'type': 'then-feature-div',
-                'index': n_row
-            },
-            style={'width': '180px'}
-        ),
-        html.Div(
-            id={
-                'type': 'then-value-div',
-                'index': n_row
-            },
-            children=[],
-            style={'width': '70px'}
+                    searchable=False,
+                    style={'width': '107%'}
+                )],
+                style={'width': '32%'}
+            ),
+            html.Div(
+                id={
+                    'type': 'then-feature-div',
+                    'index': n_row
+                },
+                style={'width': '32%'}
+            ),
+            html.Div(
+                id={
+                    'type': 'then-value-div',
+                    'index': n_row
+                },
+                style={'width': '12%'}
+            )
+        ],
+        'Задержка': [
+            html.P("Задержка:",
+                style={'width': '80px'}
+            ),
+            html.Div([
+                dcc.Input(
+                    id={
+                        'type': 'then-wait-input',
+                        'index': n_row
+                    },
+                    style={'width': '78px'}
+                )],
+                style={'width': '80px'}
+            ),
+            html.P("cекунд",
+                style={'width': '80px'}
+            ),
+            html.Div([
+                dcc.Input(
+                    id={
+                        'type': 'then-wait-day',
+                        'index': n_row
+                    },
+                    style={'width': '35px'}
+                )],
+                style={'width': '36px'}
+            ),
+            html.P("д",
+                style={'width': '0px'}
+            ),
+            html.Div([
+                dcc.Dropdown(
+                    id={
+                        'type': 'then-wait-hour',
+                        'index': n_row
+                    },
+                    options=list(range(0, 24)),
+                    clearable=False,
+                    searchable=False,
+                    style={'width': '35px'}
+                )],
+                style={'width': '40px'}
+            ),
+            html.Div([
+                dcc.Dropdown(
+                    id={
+                        'type': 'then-wait-minute',
+                        'index': n_row
+                    },
+                    options=list(range(0, 60)),
+                    clearable=False,
+                    searchable=False,
+                    style={'width': '35px'}
+                )],
+                style={'width': '40px'}
+            ),
+
+        ],
+        'Сценарий': [
+        ]
+    }
+    return dbc.Row(rows[todo] + [
+        html.Div([
+            dcc.Store(
+                id={
+                    'type': 'then-store',
+                    'index': n_row
+                },
+                data = False
+            ),
+            dcc.Dropdown(
+                id={
+                    'type': 'then-todo-dropdown',
+                    'index': n_row
+                },
+                options=['Устройство', 'Задержка', 'Сценарий', 'удалить'],
+                value=None,
+                placeholder='Вставить',
+                clearable=False,
+                disabled=False,
+                searchable=False,
+                style={'width': '100%'}
+            )],
+            style={'width': '24%'}
         )
-    ])
+    ],
+#    style={'width': '540px'},
+#    justify='center'
+)
 
 
-def then_row_create(n_row):
-    return dbc.Row([
-        html.Button('+',
-            id={
-                'type': 'then-button+',
-                'index': n_row
-            },
-            style={'width': '50px'},
-            n_clicks=0,
-            disabled=True
-        ),
-        dcc.Dropdown(
-            id={
-                'type': 'then-device-dropdown',
-                'index': n_row
-            },
-            options=[{'label': x['name'], 'value': devices.index(x)}
-                     for x in devices if 'commands' in x],
-#            value=2,
-            clearable=False,
-            style={'width': '180px'}
-        ),
-        html.Div(
-            id={
-                'type': 'then-feature-div',
-                'index': n_row
-            },
-            children=[],
-            style={'width': '180px'}
-        ),
-        html.Div(
-            id={
-                'type': 'then-value-div',
-                'index': n_row
-            },
-            children=[],
-            style={'width': '100px'}
-        ),
-        html.Button('-',
-            id={
-                'type': 'then-button-',
-                'index': n_row
-            },
-            value='-',
-            style={'width': '40px'}
-#            disabled=True
-        )
-    ])
-
-app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+app = Dash(
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    suppress_callback_exceptions=True,
+    meta_tags=[{
+        "name": "viewport",
+        "content": "width=device-width, initial-scale=1, maximum-scale=1"
+    }]
+)
 app.layout = html.Div([
     dbc.Row([
         dcc.Input(
             placeholder='Название сценария',
             id='scene-input',
             debounce=True,
-#            value='Тест',
             style={'width': '250px'}
         ),
         html.Button("сохранить",
@@ -162,11 +203,27 @@ app.layout = html.Div([
     ]),
     html.Div(
         id='if-row-container-div',
-        children=[if_row_create(0)]
+        children=[if_row_create(0)],
+        style={'width': '540px'}
     ),
     html.Div(
         id='then-row-container-div',
-        children=[then_todo_create(0)]
+        children=[
+            dcc.Dropdown(
+                id={
+                    'type': 'then-todo-dropdown',
+                    'index': 0
+                },
+                options=['Устройство', 'Задержка', 'Сценарий'],
+                value=None,
+                placeholder='Добавить',
+                clearable=False,
+                searchable=False,
+                disabled=False,
+                style={'width': '110px'}
+            )
+        ],
+        style={'width': '540px'}
     )
 ])
 
@@ -188,6 +245,8 @@ def display_if_feature(device, id_):
         },
         options=options,
         disabled=disabled,
+        searchable=False,
+        style={'width': '178px'},
         clearable=False
     )]
 
@@ -208,14 +267,15 @@ def display_if_value(feature, device, id_):
         if devices[device]['features'][feature]['type'] in ('bool', 'enum'):
             return [dcc.Dropdown(
                 id=id,
-                style={'width': '80px'},
+                style={'width': '78px'},
                 clearable=False,
+                searchable=False,
                 options=devices[device]['features'][feature].get('values', ['True', 'False'])
             )]
         disabled = False
     return [dcc.Input(
         id=id,
-        style={'width': '80px'},
+        style={'width': '78px'},
 #        placeholder='>1',
         value=None,
         disabled=disabled
@@ -250,26 +310,6 @@ def display_if_container_div(values, ids, children):
     return children
 
 @callback(
-    Output({'type': 'then-device-div', 'index': MATCH}, 'children'),
-    Input({'type': 'then-todo-dropdown', 'index': MATCH}, 'value'),
-    State({'type': 'then-todo-dropdown', 'index': MATCH}, 'id'),
-    prevent_initial_call=True
-)
-def display_then_container_div(value, id_):
-    if value == 'Устройство':
-        return dcc.Dropdown(
-            id={
-                'type': 'then-device-dropdown',
-                'index': id_['index']
-            },
-            options=[{'label': x['name'], 'value': devices.index(x)}
-                     for x in devices if 'commands' in x],
-            clearable=False,
-            style={'width': '180px'}
-        )
-
-
-@callback(
     Output({'type': 'then-feature-div', 'index': MATCH}, 'children'),
     Input({'type': 'then-device-dropdown', 'index': MATCH}, 'value'),
     State({'type': 'then-device-dropdown', 'index': MATCH}, 'id'),
@@ -290,7 +330,8 @@ def display_then_feature(device, id_):
         options=options,
         clearable=False,
         disabled=disabled,
-        style={'width': '180px'}
+        searchable=False,
+        style={'width': '107%'}
     )]
 
 @callback(
@@ -301,8 +342,6 @@ def display_then_feature(device, id_):
     prevent_initial_call=True
 )
 def display_then_value(feature, device, id_):
-    if feature is None:
-        return
     disabled = True
     id = {
         'type': 'then-value-input',
@@ -312,60 +351,60 @@ def display_then_value(feature, device, id_):
         if devices[device]['features'][feature]['type'] in ('bool', 'enum'):
             return [dcc.Dropdown(
                 id=id,
-                style={'width': '70px'},
+                style={'width': '125%'},
                 clearable=False,
+                searchable=False,
                 options=devices[device]['features'][feature].get('values', ['True', 'False'])
             )]
         disabled = False
     return [dcc.Input(
         id=id,
-        style={'width': '70px'},
+        style={'width': '125%'},
 #        placeholder='>1',
         value=None,
         disabled=disabled
     )]
 
 @callback(
-    Output('then-row-container-div', 'children'),
-    [Input({'type': 'then-value-input', 'index': ALL}, 'value'),
-     Input({'type': 'then-button-', 'index': ALL}, 'n_clicks'),
-     Input({'type': 'then-button+', 'index': ALL}, 'n_clicks')],
-    [State({'type': 'then-todo-dropdown', 'index': ALL}, 'id'),
-     State({'type': 'then-button-', 'index': ALL}, 'id'),
-     State('then-row-container-div', 'children')],
+    Output({'type': 'then-store', 'index': MATCH}, 'data'),
+    Input({'type': 'then-value-input', 'index': MATCH}, 'value'),
     prevent_initial_call=True
 )
-def display_then_container_div(values, del_clicks, add_clicks, ids, ids_row, children):
+def display_then_value(value):
+    return value != '' and value is not None
 
-    def del_row(n_row):
-        for row in children:
-            if row['props']['id']['index'] == n_row:
-                children.remove(row)
+
+@callback(
+    Output('then-row-container-div', 'children'),
+    Input({'type': 'then-todo-dropdown', 'index': ALL}, 'value'),
+    State({'type': 'then-todo-dropdown', 'index': ALL}, 'id'),
+#    State('then-row-container-div', 'children')],
+    prevent_initial_call=True
+)
+def display_then_container_div(values, ids):
+    todos = ['Устройство', 'Задержка', 'Сценарий', 'Удалить']
+    children = Patch()
+    for todo in todos:
+        if todo in values:
+            inx = values.index(todo)
+            if todo == 'удалить':
+                del children[inx]
                 break
-
-    print(add_clicks)
-    if 1 in del_clicks:
-#        del_row(ids_row[del_clicks.index(1)]['index'])
-#        if not ids:
-#            children.append(then_todo_create(ids_row[-1]['index'] + 1))
-        return children
-    if len(values) < len(ids_row):
-        return children
-#    if None in values and ids:
-#        del_row(ids[0]['index'])
-#    elif None not in values and not ids:
-#        children.append(then_todo_create(ids_row[-1]['index'] + 1))
+            children.insert(inx, then_row_create(todo, ids[inx]['index'] + 1))
+            break
     return children
 
 @callback(
-    Output({'type': 'then-button+', 'index': ALL}, 'disabled'),
-    Input({'type': 'then-value-input', 'index': ALL}, 'value'),
-    State({'type': 'then-button+', 'index': ALL}, 'id'),
+    [Output({'type': 'then-todo-dropdown', 'index': ALL}, 'disabled'),
+     Output({'type': 'then-todo-dropdown', 'index': ALL}, 'value')],
+    Input({'type': 'then-store', 'index': ALL}, 'data'),
+#    State({'type': 'then-button+', 'index': ALL}, 'id'),
 #    prevent_initial_call=True
 )
-def display_then_button(values, ids):
-    ret = len(values) < len(ids) or None in values
-    return [ret for i in ids]
+def display_then_button(datas):
+    disabled = False in datas
+    lines = len(datas) + 1
+    return [disabled] * lines, [None] * lines
 
 
 if __name__ == '__main__':
