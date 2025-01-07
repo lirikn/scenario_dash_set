@@ -70,12 +70,12 @@ def if_row_create():
                     'type': 'if-todo-dropdown',
                     'index': n_row
                 },
-                options=['ТОГДА'],
+                options=['И', 'ИЛИ', 'ТОГДА', 'удалить'],
                 value='ТОГДА',
                 style={'width': '100px'},
                 clearable=False,
                 searchable=False,
-#                disabled=True
+                disabled=True
             )],
             style={'width': '100px'}
         )
@@ -356,16 +356,14 @@ def display_if_value(feature, device, id_):
     )]
 
 @callback(
-    Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'options'),
-    Input({'type': 'if-value-input', 'index': MATCH}, 'value'),
+    Output({'type': 'if-todo-dropdown', 'index': ALL}, 'disabled'),
+    [Input({'type': 'if-store', 'index': ALL}, 'data'),
+    Input({'type': 'then-store', 'index': ALL}, 'data')],
+    State({'type': 'if-todo-dropdown', 'index': ALL}, 'id'),
     prevent_initial_call=True
 )
-def display_if_todo_options(value):
-    if not value:
-        options = ['ТОГДА', 'удалить']
-    else:
-        options = ['И', 'ИЛИ', 'ТОГДА', 'удалить']
-    return options
+def display_if_todo_disabled(if_store, then_store, ids):
+    return [False in if_store or False in then_store] * len(ids)
 
 @callback(
     Output({'type': 'if-store', 'index': MATCH}, 'data'),
@@ -475,16 +473,18 @@ def display_then_container_div(values):
     [Output({'type': 'then-todo-dropdown', 'index': ALL}, 'options'),
      Output({'type': 'then-todo-dropdown', 'index': ALL}, 'value')],
     Input({'type': 'then-store', 'index': ALL}, 'data'),
+    Input('save-button', 'disabled'),
     #    prevent_initial_call=True
 )
-def display_then_button(then_store):
+def display_then_button(then_store, disabled):
     lines = len(then_store)
-    if all(then_store):
+    if all(then_store) and not disabled:
         options = [todos] * lines
         options.append(todos[0:-1])
     else:
         options = [['']] * (lines + 1)
-        options[then_store.index(False)] = ['удалить']
+        if False in then_store:
+            options[then_store.index(False)] = ['удалить']
     return options, [None] * (lines + 1)
 
 @callback(
@@ -546,8 +546,7 @@ def display_then_feature(value, id_):
     prevent_initial_call=True
 )
 def display_save_button(name, if_todos, if_values, then_store):
-    print(then_store)
-    return len(if_values) and len(if_values) < len(if_todos) or None in if_values or not then_store or False in then_store or not name
+    return len(if_values) and len(if_values) < len(if_todos) or None in if_values or False in then_store or not name
 
 @callback(
 #    Output({'type': 'then-button+', 'index': MATCH}, 'n_clicks'),
