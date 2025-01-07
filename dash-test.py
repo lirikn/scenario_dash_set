@@ -2,7 +2,6 @@ from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, Patch, callb
 import dash_bootstrap_components as dbc
 import json
 
-from dateutils import hours
 
 with open('config.json') as json_file:
     devices = json.load(json_file)
@@ -11,7 +10,7 @@ def list_sort(elem):
     return elem['label']
 
 def list_devices(prop):
-    ret = [{'label': x['name'] + '\n' + x.get('room', ''), 'value': devices.index(x)}
+    ret = [{'label': x['name'] + ' ' + x.get('room', ''), 'value': devices.index(x)}
                      for x in devices if prop in x]
     ret.sort(key=list_sort)
     return ret
@@ -20,6 +19,7 @@ devices_states = list_devices('states')
 devices_commands = list_devices('commands')
 todos = ['Устройство', 'Задержка', 'Сценарий', 'удалить']
 count = [0, 1]
+save = []
 
 def if_row_create():
     n_row = count[0]
@@ -146,6 +146,7 @@ def then_row_create(todo):
                         'type': 'then-wait-day',
                         'index': n_row
                     },
+                    value='0',
                     style={'width': '34px', 'height': '35px'}
                 )],
                 style={'width': '35px'}
@@ -236,21 +237,21 @@ app.layout = html.Div([
             id='scene-input',
             value='',
             debounce=True,
-            style={'width': '250px'}
+            style={'width': '199px'}
         ),
         html.Button("сохранить",
             id="save-button",
             disabled=True,
             n_clicks=0,
-            style={'width': '100px'}
+            style={'width': '99px'}
         ),
         html.Button("загрузить",
             id="load-button",
 #            disabled=True,
             n_clicks=0,
-            style={'width': '100px'}
+            style={'width': '99px'}
         )
-    ]),
+    ], style={'width': '400px'}),
     html.Div(
         id='if-row-container-div',
         children=[if_row_create()],
@@ -485,8 +486,6 @@ def display_then_wait_(n_clicks, value):
 )
 def display_save_button(name, if_todos, if_values, then_store):
     return len(if_values) and len(if_values) < len(if_todos) or None in if_values or False in then_store or not name
-
-save = []
 
 @callback(
 #    Output({'type': 'then-button+', 'index': MATCH}, 'n_clicks'),
