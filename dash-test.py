@@ -20,6 +20,7 @@ devices_commands = list_devices('commands')
 todos = ['Устройство', 'Задержка', 'Сценарий', 'удалить']
 count = [0, 1]
 save = []
+scenes = {}
 
 def if_row_create():
     n_row = count[0]
@@ -36,6 +37,7 @@ def if_row_create():
 #                     for x in devices if 'states' in x],
                 optionHeight=50,
                 clearable=False,
+                value=None,
                 searchable=False,
                 style={'width': '199px'}
             )],
@@ -96,6 +98,7 @@ def then_row_create(todo):
 #                    [{'label': x['name'], 'value': devices.index(x)}
 #                         for x in devices if 'commands' in x],
                     clearable=False,
+                    value=None,
                     searchable=False,
                     style={'width': '199px'}
                 )],
@@ -241,7 +244,8 @@ def then_row_create(todo):
             )],
             style={'width': '100px'}
         )],
-        align='center'
+        align='center',
+#        justify='around'
     )
 
 
@@ -546,7 +550,6 @@ def display_then_feature(value, id_):
     prevent_initial_call=True
 )
 def display_save_button(name, if_todos, if_values, then_store):
-    print(then_store)
     return len(if_values) and len(if_values) < len(if_todos) or None in if_values or not then_store or False in then_store or not name
 
 @callback(
@@ -558,10 +561,32 @@ def display_save_button(name, if_todos, if_values, then_store):
     prevent_initial_call=True
 )
 def press_save_button(n_clicks, name, if_rows, then_rows):
+    def scene_to_list(l_scene, rows):
+        for row in rows:
+            line = []
+            for props in row['props'].get('children', []):
+                if children := props['props'].get('children'):
+                    if children == 'сек.':
+                        break
+                    if type(children) is list:
+                        value = children[0]['props'].get('value')
+                        if value is not None:
+                            if type(value) is int:
+                                line.append(devices[value]['topic'])
+                            else:
+                                line.append(value)
+            if line:
+                l_scene.append(line)
+
     for scene in save:
         if scene['name'] == name:
             save.remove(scene)
     save.append({'name': name, 'if_rows': if_rows, 'then_rows': then_rows, 'count': count})
+
+    list_scene = []
+    scene_to_list(list_scene, if_rows)
+    scene_to_list(list_scene, then_rows)
+    scenes[name] = list_scene
 
 @callback(
     [Output('if-row-container-div', 'children', allow_duplicate=True),
