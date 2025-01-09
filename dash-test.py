@@ -6,6 +6,9 @@ import json
 with open('config.json') as json_file:
     devices = json.load(json_file)
 
+with open('save.json') as json_file:
+    save = json.load(json_file)
+
 def list_sort(elem):
     return elem['label']
 
@@ -19,7 +22,7 @@ devices_states = list_devices('states')
 devices_commands = list_devices('commands')
 todos = ['Устройство', 'Задержка', 'Сценарий', 'удалить']
 count = [0, 1]
-save = []
+#save = []
 scenes = {}
 
 def if_row_create():
@@ -264,7 +267,7 @@ app.layout = html.Div([
             id='scene-input',
             value='',
             debounce=True,
-            style={'width': '199px'}
+            style={'width': '179px'}
         ),
         html.Button("сохранить",
             id="save-button",
@@ -277,8 +280,17 @@ app.layout = html.Div([
 #            disabled=True,
             n_clicks=0,
             style={'width': '99px'}
-        )
-    ], style={'width': '400px'}),
+        ),
+        html.Div([
+            dcc.Dropdown(
+                id='load-dropdown',
+                options=[{'label': x['name'], 'value': i} for i, x in enumerate(scenes)],
+                style={'width': '179px'}
+            )],
+            style={'width': '180px'}
+        )],
+        style={'width': '560px'}
+    ),
     html.Div(
         id='if-row-container-div',
         children=[if_row_create()],
@@ -553,7 +565,7 @@ def display_save_button(name, if_todos, if_values, then_store):
     return len(if_values) and len(if_values) < len(if_todos) or None in if_values or not then_store or False in then_store or not name
 
 @callback(
-#    Output({'type': 'then-button+', 'index': MATCH}, 'n_clicks'),
+    Output('load-dropdown', 'options'),
     Input('save-button', 'n_clicks'),
     [State('scene-input', 'value'),
      State('if-row-container-div', 'children'),
@@ -582,11 +594,15 @@ def press_save_button(n_clicks, name, if_rows, then_rows):
         if scene['name'] == name:
             save.remove(scene)
     save.append({'name': name, 'if_rows': if_rows, 'then_rows': then_rows, 'count': count})
+    with open('save.json', 'w') as json_file:
+        json.dump(save, json_file, ensure_ascii=False, indent=4)
 
     list_scene = []
     scene_to_list(list_scene, if_rows)
     scene_to_list(list_scene, then_rows)
     scenes[name] = list_scene
+    return no_update
+
 
 @callback(
     [Output('if-row-container-div', 'children', allow_duplicate=True),
