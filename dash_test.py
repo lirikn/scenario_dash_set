@@ -32,6 +32,7 @@ count = [0, 1]
 def if_row_create():
     n_row = count[0]
     count[0] += 1
+    print(count[0])
     return dbc.Row([
         html.Div([
             dcc.Dropdown(
@@ -570,14 +571,16 @@ def press_load_dropdown(_):
 @callback(
     [Output('scene-input', 'value'),
      Output('if-row-container-div', 'children', allow_duplicate=True),
-     Output('then-row-container-div', 'children', allow_duplicate=True)],
+     Output('then-row-container-div', 'children', allow_duplicate=True),
+     Output('load-dropdown', 'value')],
     Input('load-dropdown', 'value'),
     prevent_initial_call=True,
 )
 def press_load_dropdown(value):
     count[0] = saves[value]['count'][0]
     count[1] = saves[value]['count'][1]
-    return saves[value]['name'], saves[value]['if_rows'], saves[value]['then_rows']
+    print(count)
+    return saves[value]['name'], saves[value]['if_rows'], saves[value]['then_rows'], None
 
 def row_to_list(rows):
     list_ = []
@@ -598,8 +601,6 @@ def row_to_list(rows):
             list_.append(line)
     return list_
 
-
-
 @app.callback(
     Output("url", "href"),
     Input("save-delete-dropdown", "value"),
@@ -616,30 +617,40 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
         if scene['name'] == name:
             saves.remove(scene)
             save = True
-            send_msg('del', [name])
+            send_msg('del', name)
             break
     if value == 'сохранить':
-        saves.append({'name': name, 'if_rows': if_rows, 'then_rows': then_rows, 'count': count})
+        saves.append({'name': name, 'if_rows': if_rows.copy(), 'then_rows': then_rows.copy(), 'count': count.copy()})
         save = True
-
-        if_list = row_to_list(if_rows)
+        print(count)
+        list_ = row_to_list(if_rows)
         send = []
-        for line in if_list:
+        for line in list_:
             if len(line) == 4:
-                send.append({'topic': line[0], 'future': line[1], 'value': line[2]})
+                send.append({'topic': line[0], 'feature': line[1], 'value': line[2]})
                 if line[3] == 'И':
                     continue
                 send.append(name)
                 send_msg('if', send)
                 send = []
-        send = row_to_list(then_rows)
-        send.insert(0, name)
+        list_ = row_to_list(then_rows)
+        send = {name: []}
+        delay = 0
+        for line in list_:
+            if len(line) == 3:
+                send[name].append({'delay': delay, 'topic': line[0], 'feature': line[1], 'value': line[2]})
+                delay = 0
+            elif len(line) == 2:
+                send[name].append({'delay': delay, 'scene': line[0], 'action': line[1]})
+                delay = 0
+            else:
+                delay += int(line[0])
         send_msg('then', send)
 
     if save:
         with open('save.json', 'w') as json_file:
             json.dump(saves, json_file, ensure_ascii=False, indent=4)
-    count[0], count[1] = 0, 1
+    count[0], count[1] = 1, 1
     return "/"
 
 if __name__ == '__main__':
