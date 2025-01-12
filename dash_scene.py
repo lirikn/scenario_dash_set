@@ -1,7 +1,8 @@
 from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, Patch, callback, no_update
 import dash_bootstrap_components as dbc
 import json
-
+#from mqtt_send import send_msg
+from scene_test import send_msg
 
 with open('config.json') as json_file:
     devices = json.load(json_file)
@@ -560,23 +561,25 @@ def display_save_button(name, if_todos, if_values, then_store):
 
 @callback(
     Output('load-dropdown', 'options'),
-    Input('load-div', 'n_clicks'),
-    prevent_initial_call=True
+    Input('url', 'id'),
+#    prevent_initial_call=True
 )
 def press_load_dropdown(_):
+    count[0], count[1] = 1, 1
     return [{'label': x['name'], 'value': i} for i, x in enumerate(saves)]
 
 @callback(
     [Output('scene-input', 'value'),
      Output('if-row-container-div', 'children', allow_duplicate=True),
-     Output('then-row-container-div', 'children', allow_duplicate=True)],
+     Output('then-row-container-div', 'children', allow_duplicate=True),
+     Output('load-dropdown', 'value')],
     Input('load-dropdown', 'value'),
     prevent_initial_call=True,
 )
 def press_load_dropdown(value):
     count[0] = saves[value]['count'][0]
     count[1] = saves[value]['count'][1]
-    return saves[value]['name'], saves[value]['if_rows'], saves[value]['then_rows']
+    return saves[value]['name'], saves[value]['if_rows'], saves[value]['then_rows'], None
 
 def row_to_list(rows):
     list_ = []
@@ -589,15 +592,13 @@ def row_to_list(rows):
                 if isinstance(children, list):
                     value = children[0]['props'].get('value')
                     if value is not None:
-                        if type(value) is int:
+                        if isinstance(value, int):
                             line.append(devices[value]['topic'])
                         else:
                             line.append(value)
         if line:
             list_.append(line)
     return list_
-
-
 
 @app.callback(
     Output("url", "href"),
@@ -615,30 +616,40 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
         if scene['name'] == name:
             saves.remove(scene)
             save = True
+            send_msg('del', name)
             break
     if value == 'сохранить':
-        saves.append({'name': name, 'if_rows': if_rows, 'then_rows': then_rows, 'count': count})
+        saves.append({'name': name, 'if_rows': if_rows.copy(), 'then_rows': then_rows.copy(), 'count': count.copy()})
         save = True
 
-        if_list = row_to_list(if_rows)
+        list_ = row_to_list(if_rows)
         send = []
-        for line in if_list:
+        for line in list_:
             if len(line) == 4:
-                send.append({'topic': line[0], 'future': line[1], 'value': line[2]})
+                send.append({'topic': line[0], 'feature': line[1], 'value': line[2]})
                 if line[3] == 'И':
                     continue
                 send.append(name)
-                print(send)
+                send_msg('if', send)
                 send = []
-        send = row_to_list(then_rows)
-        send.insert(0, name)
-        print(send)
+        list_ = row_to_list(then_rows)
+        send = {name: []}
+        delay = 0
+        for line in list_:
+            if len(line) == 3:
+                send[name].append({'delay': delay, 'topic': line[0], 'feature': line[1], 'value': line[2]})
+                delay = 0
+            elif len(line) == 2:
+                send[name].append({'delay': delay, 'scene': line[0], 'action': line[1]})
+                delay = 0
+            else:
+                delay += int(line[0])
+        send_msg('then', send)
 
     if save:
         with open('save.json', 'w') as json_file:
             json.dump(saves, json_file, ensure_ascii=False, indent=4)
-    count[0], count[1] = 0, 1
     return "/"
 
 if __name__ == '__main__':
-    app.run_server(debug=True, use_reloader=True)
+    app.run_server(debug=True, use_reloader=False)

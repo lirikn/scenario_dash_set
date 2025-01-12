@@ -1,17 +1,24 @@
 from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, Patch, callback, no_update
 import dash_bootstrap_components as dbc
 import json
-
+#from mqtt_send import send_msg
+from scene_test import send_msg
 
 with open('config.json') as json_file:
     devices = json.load(json_file)
+
+try:
+    with open('save.json') as json_file:
+        saves = json.load(json_file)
+except:
+    saves = []
 
 def list_sort(elem):
     return elem['label']
 
 def list_devices(prop):
-    ret = [{'label': x['name'] + ' ' + x.get('room', ''), 'value': devices.index(x)}
-                     for x in devices if prop in x]
+    ret = [{'label': x['name'] + ' ' + x.get('room', ''), 'value': i}
+                     for i, x in enumerate(devices) if prop in x]
     ret.sort(key=list_sort)
     return ret
 
@@ -19,7 +26,8 @@ devices_states = list_devices('states')
 devices_commands = list_devices('commands')
 todos = ['Устройство', 'Задержка', 'Сценарий', 'удалить']
 count = [0, 1]
-save = []
+#scenarios = []
+#scenes = {}
 
 def if_row_create():
     n_row = count[0]
@@ -32,10 +40,9 @@ def if_row_create():
                     'index': n_row
                 },
                 options=devices_states,
-#                [{'label': x['name'], 'value': devices.index(x)}
-#                     for x in devices if 'states' in x],
                 optionHeight=50,
                 clearable=False,
+                value=None,
                 searchable=False,
                 style={'width': '199px'}
             )],
@@ -57,25 +64,18 @@ def if_row_create():
             children=[],
             style={'width': '80px'}
         ),
-        dcc.Store(
-            id={
-                'type': 'if-store',
-                'index': n_row
-            },
-            data=False
-        ),
         html.Div([
             dcc.Dropdown(
                 id={
                     'type': 'if-todo-dropdown',
                     'index': n_row
                 },
-                options=['И', 'ИЛИ', 'ТОГДА', 'удалить'],
+                options=['ТОГДА'],
                 value='ТОГДА',
                 style={'width': '100px'},
                 clearable=False,
                 searchable=False,
-                disabled=True
+#                disabled=True
             )],
             style={'width': '100px'}
         )
@@ -93,9 +93,8 @@ def then_row_create(todo):
                         'index': n_row
                     },
                     options=devices_commands,
-#                    [{'label': x['name'], 'value': devices.index(x)}
-#                         for x in devices if 'commands' in x],
                     clearable=False,
+                    value=None,
                     searchable=False,
                     style={'width': '199px'}
                 )],
@@ -201,19 +200,19 @@ def then_row_create(todo):
                         'type': 'then-scene-dropdown',
                         'index': n_row
                     },
-                    options=[x['name'] for x in save],
+                    options=[x['name'] for x in saves],
                     clearable=False,
                     searchable=False,
-                    style={'width': '229px'}
+                    style={'width': '233px'}
                 )],
-                style={'width': '230px'}
+                style={'width': '235px'}
             ),
             html.Div(
                 id={
                     'type': 'then-scene-div',
                     'index': n_row
                 },
-                style={'width': '150px'}
+                style={'width': '145px'}
             )
         ]
     }
@@ -241,7 +240,8 @@ def then_row_create(todo):
             )],
             style={'width': '100px'}
         )],
-        align='center'
+        align='center',
+#        justify='around'
     )
 
 
@@ -254,27 +254,36 @@ app = Dash(
     }]
 )
 app.layout = html.Div([
+    dcc.Location(id='url', refresh=True),
     dbc.Row([
-        dcc.Input(
-            placeholder='Название сценария',
-            id='scene-input',
-            value='',
-            debounce=True,
-            style={'width': '199px'}
+        html.Div(
+            id='load-div',
+            children=[dcc.Dropdown(
+                id='load-dropdown',
+                options=[],
+                placeholder='Загрузить',
+                clearable=False,
+                searchable=False,
+                style={'width': '233px'}
+            )],
+            style={'width': '235px'}
         ),
-        html.Button("сохранить",
-            id="save-button",
-            disabled=True,
-            n_clicks=0,
-            style={'width': '99px'}
+        html.Div([
+            dcc.Input(
+                placeholder='Название сценария',
+                id='scene-input',
+                value='',
+                debounce=True,
+                style={'width': '214px', 'height': '35px'}
+            )],
+            style={'width': '215px'}
         ),
-        html.Button("загрузить",
-            id="load-button",
-#            disabled=True,
-            n_clicks=0,
-            style={'width': '99px'}
-        )
-    ], style={'width': '400px'}),
+        html.Div(
+            id ='save-delete-div',
+            style={'width': '110px'}
+        )],
+        style={'width': '560px'}
+    ),
     html.Div(
         id='if-row-container-div',
         children=[if_row_create()],
@@ -356,23 +365,15 @@ def display_if_value(feature, device, id_):
     )]
 
 @callback(
-    Output({'type': 'if-todo-dropdown', 'index': ALL}, 'disabled'),
-    [Input({'type': 'if-store', 'index': ALL}, 'data'),
-    Input({'type': 'then-store', 'index': ALL}, 'data')],
-    State({'type': 'if-todo-dropdown', 'index': ALL}, 'id'),
-    prevent_initial_call=True
-)
-def display_if_todo_disabled(if_store, then_store, ids):
-    return [False in if_store or False in then_store] * len(ids)
-
-@callback(
-    Output({'type': 'if-store', 'index': MATCH}, 'data'),
+    Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'options'),
     Input({'type': 'if-value-input', 'index': MATCH}, 'value'),
-#    State({'type': 'if-value-input', 'index': MATCH}, 'id'),
     prevent_initial_call=True
 )
-def display_if_todo(value):
-    return bool(value)
+def display_if_todo_options(value):
+    options = ['ТОГДА', 'удалить']
+    if value:
+        options = ['И', 'ИЛИ'] + options
+    return options
 
 @callback(
     Output('if-row-container-div', 'children'),
@@ -473,18 +474,16 @@ def display_then_container_div(values):
     [Output({'type': 'then-todo-dropdown', 'index': ALL}, 'options'),
      Output({'type': 'then-todo-dropdown', 'index': ALL}, 'value')],
     Input({'type': 'then-store', 'index': ALL}, 'data'),
-    Input('save-button', 'disabled'),
     #    prevent_initial_call=True
 )
-def display_then_button(then_store, disabled):
+def display_then_button(then_store):
     lines = len(then_store)
-    if all(then_store) and not disabled:
+    if all(then_store):
         options = [todos] * lines
         options.append(todos[0:-1])
     else:
         options = [['']] * (lines + 1)
-        if False in then_store:
-            options[then_store.index(False)] = ['удалить']
+        options[then_store.index(False)] = ['удалить']
     return options, [None] * (lines + 1)
 
 @callback(
@@ -534,11 +533,11 @@ def display_then_feature(value, id_):
         options=['включить', 'выключить', 'запустить', 'прервать'],
         clearable=False,
         searchable=False,
-        style={'width': '149px'}
+        style={'width': '144px'}
     )]
 
 @callback(
-    Output('save-button', 'disabled'),
+    Output('save-delete-div', 'children'),
     [Input('scene-input', 'value'),
      Input({'type': 'if-todo-dropdown', 'index': ALL}, 'value'),
      Input({'type': 'if-value-input', 'index': ALL},'value'),
@@ -546,34 +545,105 @@ def display_then_feature(value, id_):
     prevent_initial_call=True
 )
 def display_save_button(name, if_todos, if_values, then_store):
-    return len(if_values) and len(if_values) < len(if_todos) or None in if_values or False in then_store or not name
+    if not name or (len(if_values) and len(if_values) < len(if_todos)) or None in if_values or not then_store or False in then_store:
+        options, placeholder = ['удалить'], 'Удалить'
+    else:
+        options, placeholder = ['сохранить', 'удалить'], 'Сохранить'
+    return dcc.Dropdown(
+                id="save-delete-dropdown",
+                options=options,
+                placeholder=placeholder,
+                clearable=False,
+                searchable=False,
+                style={'width': '109px'})
 
 @callback(
-#    Output({'type': 'then-button+', 'index': MATCH}, 'n_clicks'),
-    Input('save-button', 'n_clicks'),
+    Output('load-dropdown', 'options'),
+    Input('url', 'id'),
+#    prevent_initial_call=True
+)
+def press_load_dropdown(_):
+    count[0], count[1] = 1, 1
+    return [{'label': x['name'], 'value': i} for i, x in enumerate(saves)]
+
+@callback(
+    [Output('scene-input', 'value'),
+     Output('if-row-container-div', 'children', allow_duplicate=True),
+     Output('then-row-container-div', 'children', allow_duplicate=True),
+     Output('load-dropdown', 'value')],
+    Input('load-dropdown', 'value'),
+    prevent_initial_call=True,
+)
+def press_load_dropdown(value):
+    count[0] = saves[value]['count'][0]
+    count[1] = saves[value]['count'][1]
+    return saves[value]['name'], saves[value]['if_rows'], saves[value]['then_rows'], None
+
+@app.callback(
+    Output("url", "href"),
+    Input("save-delete-dropdown", "value"),
     [State('scene-input', 'value'),
      State('if-row-container-div', 'children'),
      State('then-row-container-div', 'children')],
-    prevent_initial_call=True
-)
-def press_save_button(n_clicks, name, if_rows, then_rows):
-    for scene in save:
-        if scene['name'] == name:
-            save.remove(scene)
-    save.append({'name': name, 'if_rows': if_rows, 'then_rows': then_rows, 'count': count})
-
-@callback(
-    [Output('if-row-container-div', 'children', allow_duplicate=True),
-     Output('then-row-container-div', 'children', allow_duplicate=True)],
-    Input('load-button', 'n_clicks'),
-    State('scene-input', 'value'),
     prevent_initial_call=True,
 )
-def press_load_button(n_clicks, name):
-    for scene in save:
+def save_delete_dropdown(value, name, if_rows, then_rows):
+    if value is None:
+        return no_update
+
+    def row_to_send(rows):
+        send = []
+        delay = 0
+        for row in rows:
+            line = []
+            for props in row['props'].get('children', []):
+                if children := props['props'].get('children'):
+                    if children == 'сек.':
+                        break
+                    if isinstance(children, list):
+                        data = children[0]['props'].get('value')
+                        if data is not None:
+                            if isinstance(data, int):
+                                line.append(devices[data]['topic'])
+                            else:
+                                line.append(data)
+            if not (qnt := len(line)):
+                continue
+            if qnt == 4:
+                send.append({'topic': line[0], 'feature': line[1], 'value': line[2]})
+                if line[3] == 'И':
+                    continue
+                send.append(name)
+                send_msg('if', send)
+                send = []
+            elif qnt == 3:
+                send.append({'delay': delay, 'topic': line[0], 'feature': line[1], 'value': line[2]})
+                delay = 0
+            elif qnt == 2:
+                send.append({'delay': delay, 'scene': line[0], 'action': line[1]})
+                delay = 0
+            elif line[0].isdigit():
+                delay += int(line[0])
+        return send
+
+    save = False
+    for scene in saves:
         if scene['name'] == name:
-            return scene['if_rows'], scene['then_rows']
-    return no_update, no_update
+            saves.remove(scene)
+            save = True
+            send_msg('del', name)
+            break
+    if value == 'сохранить':
+        saves.append({'name': name, 'if_rows': if_rows.copy(), 'then_rows': then_rows.copy(), 'count': count.copy()})
+        save = True
+
+        row_to_send(if_rows)
+        send_msg('then', {name: row_to_send(then_rows)})
+
+    if save:
+        with open('save.json', 'w') as json_file:
+            json.dump(saves, json_file, ensure_ascii=False, indent=4)
+    return "/"
 
 if __name__ == '__main__':
-    app.run_server(debug=True, use_reloader=True)
+    app.run_server(debug=True, use_reloader=False)

@@ -63,12 +63,23 @@ def start_scene(name, tasks):
     timers[name] = Timer(tasks[0]['delay'], start_task, args = (name, tasks))
     timers[name].start()
 
+def isfloat(val):
+    try:
+        float(val)
+        return True
+    except:
+        return False
+
 def stat_msg(message):
     for line in if_list:
         condition = False
         for item in line[:-1]:
             if f"stat/{item['topic']}/{item['feature']}" == message.topic:
-                item['condition'] = str(message.payload.decode("utf-8")) == item['value']
+                value = str(message.payload.decode("utf-8")).split()[0]
+                if item['value'][0] in '<>' and isfloat(item['value'][1:]) and isfloat(value):
+                    item['condition'] = eval(value + item['value'])
+                else:
+                    item['condition'] = value == item['value']
                 condition = all([x.get('condition') for x in line[:-1]])
         if condition:
             start_scene(line[-1], then_dict[line[-1]].copy())

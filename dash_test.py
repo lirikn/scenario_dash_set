@@ -32,7 +32,6 @@ count = [0, 1]
 def if_row_create():
     n_row = count[0]
     count[0] += 1
-    print(count[0])
     return dbc.Row([
         html.Div([
             dcc.Dropdown(
@@ -41,7 +40,7 @@ def if_row_create():
                     'index': n_row
                 },
                 options=devices_states,
-#                optionHeight=50,
+                optionHeight=50,
                 clearable=False,
                 value=None,
                 searchable=False,
@@ -94,8 +93,6 @@ def then_row_create(todo):
                         'index': n_row
                     },
                     options=devices_commands,
-#                    [{'label': x['name'], 'value': devices.index(x)}
-#                         for x in devices if 'commands' in x],
                     clearable=False,
                     value=None,
                     searchable=False,
@@ -206,16 +203,16 @@ def then_row_create(todo):
                     options=[x['name'] for x in saves],
                     clearable=False,
                     searchable=False,
-                    style={'width': '229px'}
+                    style={'width': '233px'}
                 )],
-                style={'width': '230px'}
+                style={'width': '235px'}
             ),
             html.Div(
                 id={
                     'type': 'then-scene-div',
                     'index': n_row
                 },
-                style={'width': '150px'}
+                style={'width': '145px'}
             )
         ]
     }
@@ -315,6 +312,7 @@ app.layout = html.Div([
 
 @callback(
     Output({'type': 'if-feature-div', 'index': MATCH}, 'children'),
+    Output({'type': 'if-device-dropdown', 'index': MATCH}, 'disabled'),
     Input({'type': 'if-device-dropdown', 'index': MATCH}, 'value'),
     State({'type': 'if-device-dropdown', 'index': MATCH}, 'id'),
     prevent_initial_call=True
@@ -334,10 +332,11 @@ def display_if_feature(device, id_):
         searchable=False,
         style={'width': '179px'},
         clearable=False
-    )]
+    )], True
 
 @callback(
     Output({'type': 'if-value-div', 'index': MATCH}, 'children'),
+    Output({'type': 'if-feature-dropdown', 'index': MATCH}, 'disabled'),
     Input({'type': 'if-feature-dropdown', 'index': MATCH}, 'value'),
     [State({'type': 'if-device-dropdown', 'index': MATCH}, 'value'),
      State({'type': 'if-feature-dropdown', 'index': MATCH}, 'id')],
@@ -357,7 +356,7 @@ def display_if_value(feature, device, id_):
                 clearable=False,
                 searchable=False,
                 options=devices[device]['features'][feature].get('values', ['True', 'False'])
-            )]
+            )], True
         disabled = False
     return [dcc.Input(
         id=id,
@@ -365,7 +364,7 @@ def display_if_value(feature, device, id_):
 #        placeholder='>1',
         value=None,
         disabled=disabled
-    )]
+    )], not disabled
 
 @callback(
     Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'options'),
@@ -536,7 +535,7 @@ def display_then_feature(value, id_):
         options=['включить', 'выключить', 'запустить', 'прервать'],
         clearable=False,
         searchable=False,
-        style={'width': '149px'}
+        style={'width': '144px'}
     )]
 
 @callback(
@@ -562,10 +561,11 @@ def display_save_button(name, if_todos, if_values, then_store):
 
 @callback(
     Output('load-dropdown', 'options'),
-    Input('load-div', 'n_clicks'),
-    prevent_initial_call=True
+    Input('url', 'id'),
+#    prevent_initial_call=True
 )
 def press_load_dropdown(_):
+    count[0], count[1] = 1, 1
     return [{'label': x['name'], 'value': i} for i, x in enumerate(saves)]
 
 @callback(
@@ -579,27 +579,7 @@ def press_load_dropdown(_):
 def press_load_dropdown(value):
     count[0] = saves[value]['count'][0]
     count[1] = saves[value]['count'][1]
-    print(count)
     return saves[value]['name'], saves[value]['if_rows'], saves[value]['then_rows'], None
-
-def row_to_list(rows):
-    list_ = []
-    for row in rows:
-        line = []
-        for props in row['props'].get('children', []):
-            if children := props['props'].get('children'):
-                if children == 'сек.':
-                    break
-                if isinstance(children, list):
-                    value = children[0]['props'].get('value')
-                    if value is not None:
-                        if type(value) is int:
-                            line.append(devices[value]['topic'])
-                        else:
-                            line.append(value)
-        if line:
-            list_.append(line)
-    return list_
 
 @app.callback(
     Output("url", "href"),
@@ -612,6 +592,42 @@ def row_to_list(rows):
 def save_delete_dropdown(value, name, if_rows, then_rows):
     if value is None:
         return no_update
+
+    def row_to_send(rows):
+        send = []
+        delay = 0
+        for row in rows:
+            line = []
+            for props in row['props'].get('children', []):
+                if children := props['props'].get('children'):
+                    if children == 'сек.':
+                        break
+                    if isinstance(children, list):
+                        data = children[0]['props'].get('value')
+                        if data is not None:
+                            if isinstance(data, int):
+                                line.append(devices[data]['topic'])
+                            else:
+                                line.append(data)
+            if not (qnt := len(line)):
+                continue
+            if qnt == 4:
+                send.append({'topic': line[0], 'feature': line[1], 'value': line[2]})
+                if line[3] == 'И':
+                    continue
+                send.append(name)
+                send_msg('if', send)
+                send = []
+            elif qnt == 3:
+                send.append({'delay': delay, 'topic': line[0], 'feature': line[1], 'value': line[2]})
+                delay = 0
+            elif qnt == 2:
+                send.append({'delay': delay, 'scene': line[0], 'action': line[1]})
+                delay = 0
+            elif line[0].isdigit():
+                delay += int(line[0])
+        return send
+
     save = False
     for scene in saves:
         if scene['name'] == name:
@@ -622,35 +638,13 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
     if value == 'сохранить':
         saves.append({'name': name, 'if_rows': if_rows.copy(), 'then_rows': then_rows.copy(), 'count': count.copy()})
         save = True
-        print(count)
-        list_ = row_to_list(if_rows)
-        send = []
-        for line in list_:
-            if len(line) == 4:
-                send.append({'topic': line[0], 'feature': line[1], 'value': line[2]})
-                if line[3] == 'И':
-                    continue
-                send.append(name)
-                send_msg('if', send)
-                send = []
-        list_ = row_to_list(then_rows)
-        send = {name: []}
-        delay = 0
-        for line in list_:
-            if len(line) == 3:
-                send[name].append({'delay': delay, 'topic': line[0], 'feature': line[1], 'value': line[2]})
-                delay = 0
-            elif len(line) == 2:
-                send[name].append({'delay': delay, 'scene': line[0], 'action': line[1]})
-                delay = 0
-            else:
-                delay += int(line[0])
-        send_msg('then', send)
+
+        row_to_send(if_rows)
+        send_msg('then', {name: row_to_send(then_rows)})
 
     if save:
         with open('save.json', 'w') as json_file:
             json.dump(saves, json_file, ensure_ascii=False, indent=4)
-    count[0], count[1] = 1, 1
     return "/"
 
 if __name__ == '__main__':
