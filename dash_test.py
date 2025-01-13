@@ -7,12 +7,6 @@ from scene_test import send_msg
 with open('config.json') as json_file:
     devices = json.load(json_file)
 
-try:
-    with open('save.json') as json_file:
-        saves = json.load(json_file)
-except:
-    saves = []
-
 def list_sort(elem):
     return elem['label']
 
@@ -22,11 +16,12 @@ def list_devices(prop):
     ret.sort(key=list_sort)
     return ret
 
+saves_json = 'saves.json'
 devices_states = list_devices('states')
 devices_commands = list_devices('commands')
 todos = ['Устройство', 'Задержка', 'Сценарий', 'удалить']
 count = [0, 1]
-#scenarios = []
+scene_names = set()
 #scenes = {}
 
 def if_row_create():
@@ -200,7 +195,7 @@ def then_row_create(todo):
                         'type': 'then-scene-dropdown',
                         'index': n_row
                     },
-                    options=[x['name'] for x in saves],
+                    options=sorted(scene_names),
                     clearable=False,
                     searchable=False,
                     style={'width': '233px'}
@@ -510,7 +505,7 @@ def display_then_wait(second, minute, hour, day):
     State({'type': 'then-value-input', 'index': MATCH}, 'value'),
     prevent_initial_call=True
 )
-def display_then_wait_(n_clicks, value):
+def display_then_wait_(_, value):
     if value is None or not value.isdigit():
         return no_update
     s = int(value)
@@ -565,8 +560,11 @@ def display_save_button(name, if_todos, if_values, then_store):
 #    prevent_initial_call=True
 )
 def press_load_dropdown(_):
+    scene_names.clear()
+    with open(saves_json) as json_file:
+        scene_names.update({x['name'] for x in json.load(json_file)})
     count[0], count[1] = 1, 1
-    return [{'label': x['name'], 'value': i} for i, x in enumerate(saves)]
+    return sorted(scene_names)
 
 @callback(
     [Output('scene-input', 'value'),
@@ -577,9 +575,11 @@ def press_load_dropdown(_):
     prevent_initial_call=True,
 )
 def press_load_dropdown(value):
-    count[0] = saves[value]['count'][0]
-    count[1] = saves[value]['count'][1]
-    return saves[value]['name'], saves[value]['if_rows'], saves[value]['then_rows'], None
+    with open(saves_json) as json_file:
+        save = [x for x in json.load(json_file) if x['name'] == value][0]
+    count[0] = save['count'][0]
+    count[1] = save['count'][1]
+    return save['name'], save['if_rows'], save['then_rows'], None
 
 @app.callback(
     Output("url", "href"),
@@ -628,22 +628,21 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
                 delay += int(line[0])
         return send
 
-    save = False
-    for scene in saves:
-        if scene['name'] == name:
-            saves.remove(scene)
+    with open(saves_json, 'r+') as json_file:
+        saves = json.load(json_file)
+        json_file.seek(0)
+        save = False
+        if scene := [x for x in saves if x['name'] == name]:
+            saves.remove(scene[0])
             save = True
             send_msg('del', name)
-            break
-    if value == 'сохранить':
-        saves.append({'name': name, 'if_rows': if_rows.copy(), 'then_rows': then_rows.copy(), 'count': count.copy()})
-        save = True
-
-        row_to_send(if_rows)
-        send_msg('then', {name: row_to_send(then_rows)})
-
-    if save:
-        with open('save.json', 'w') as json_file:
+        if value == 'сохранить':
+            saves.append({'name': name, 'if_rows': if_rows, 'then_rows': then_rows, 'count': count})
+            save = True
+            row_to_send(if_rows)
+            send_msg('then', {name: row_to_send(then_rows)})
+        if save:
+            json_file.truncate(0)
             json.dump(saves, json_file, ensure_ascii=False, indent=4)
     return "/"
 
