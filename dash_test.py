@@ -17,6 +17,7 @@ def list_devices(prop):
     return ret
 
 saves_json = 'saves.json'
+devices_menu = [[], []]
 devices_states = list_devices('states')
 devices_commands = list_devices('commands')
 todos = ['Устройство', 'Задержка', 'Сценарий', 'удалить']
@@ -34,7 +35,7 @@ def if_row_create():
                     'type': 'if-device-dropdown',
                     'index': n_row
                 },
-                options=devices_states,
+                options=devices_menu[0],
                 optionHeight=50,
                 clearable=False,
                 value=None,
@@ -87,7 +88,7 @@ def then_row_create(todo):
                         'type': 'then-device-dropdown',
                         'index': n_row
                     },
-                    options=devices_commands,
+                    options=devices_menu[1],
                     clearable=False,
                     value=None,
                     searchable=False,
@@ -239,23 +240,20 @@ def then_row_create(todo):
 #        justify='around'
     )
 
-
-app = Dash(
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
-    suppress_callback_exceptions=True,
-    meta_tags=[{
-        "name": "viewport",
-        "content": "width=device-width, initial-scale=1, maximum-scale=1"
-    }]
-)
-app.layout = html.Div([
+def dyn_layout():
+    devices_menu[0] = list_devices('states')
+    devices_menu[1] = list_devices('commands')
+    scene_names.clear()
+    with open(saves_json) as json_file:
+        scene_names.update({x['name'] for x in json.load(json_file)})
+    count[0], count[1] = 0, 1
+    return html.Div([
     dcc.Location(id='url', refresh=True),
     dbc.Row([
-        html.Div(
-            id='load-div',
-            children=[dcc.Dropdown(
+        html.Div([
+            dcc.Dropdown(
                 id='load-dropdown',
-                options=[],
+                options=sorted(scene_names),
                 placeholder='Загрузить',
                 clearable=False,
                 searchable=False,
@@ -304,6 +302,17 @@ app.layout = html.Div([
         style={'width': '560px'}
     )
 ])
+
+
+app = Dash(
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    suppress_callback_exceptions=True,
+    meta_tags=[{
+        "name": "viewport",
+        "content": "width=device-width, initial-scale=1, maximum-scale=1"
+    }]
+)
+app.layout = dyn_layout
 
 @callback(
     Output({'type': 'if-feature-div', 'index': MATCH}, 'children'),
@@ -553,18 +562,6 @@ def display_save_button(name, if_todos, if_values, then_store):
                 clearable=False,
                 searchable=False,
                 style={'width': '109px'})
-
-@callback(
-    Output('load-dropdown', 'options'),
-    Input('url', 'id'),
-#    prevent_initial_call=True
-)
-def press_load_dropdown(_):
-    scene_names.clear()
-    with open(saves_json) as json_file:
-        scene_names.update({x['name'] for x in json.load(json_file)})
-    count[0], count[1] = 1, 1
-    return sorted(scene_names)
 
 @callback(
     [Output('scene-input', 'value'),
