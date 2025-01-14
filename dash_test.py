@@ -2,10 +2,7 @@ from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, Patch, callb
 import dash_bootstrap_components as dbc
 import json
 #from mqtt_send import send_msg
-from scene_test import send_msg
-
-with open('config.json') as json_file:
-    devices = json.load(json_file)
+from scene_test import send_msg, devices
 
 def list_sort(elem):
     return elem['label']
@@ -241,8 +238,10 @@ def then_row_create(todo):
     )
 
 def dyn_layout():
-    devices_menu[0] = list_devices('states')
-    devices_menu[1] = list_devices('commands')
+    for ind, prop in enumerate(('states', 'commands')):
+        devices_menu[ind] = [{'label': x['name'] + ' ' + x.get('room', ''), 'value': i}
+                     for i, x in enumerate(devices) if prop in x]
+        devices_menu[ind].sort(key=list_sort)
     scene_names.clear()
     with open(saves_json) as json_file:
         scene_names.update({x['name'] for x in json.load(json_file)})

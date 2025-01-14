@@ -2,31 +2,14 @@ from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, Patch, callb
 import dash_bootstrap_components as dbc
 import json
 #from mqtt_send import send_msg
-from scene_test import send_msg
+from scene_test import send_msg, devices
 
-with open('config.json') as json_file:
-    devices = json.load(json_file)
 
-try:
-    with open('save.json') as json_file:
-        saves = json.load(json_file)
-except:
-    saves = []
-
-def list_sort(elem):
-    return elem['label']
-
-def list_devices(prop):
-    ret = [{'label': x['name'] + ' ' + x.get('room', ''), 'value': i}
-                     for i, x in enumerate(devices) if prop in x]
-    ret.sort(key=list_sort)
-    return ret
-
-devices_states = list_devices('states')
-devices_commands = list_devices('commands')
+saves_json = 'saves.json'
+devices_menu = [[], []]
 todos = ['Устройство', 'Задержка', 'Сценарий', 'удалить']
 count = [0, 1]
-#scenarios = []
+scene_names = set()
 #scenes = {}
 
 def if_row_create():
@@ -39,7 +22,7 @@ def if_row_create():
                     'type': 'if-device-dropdown',
                     'index': n_row
                 },
-                options=devices_states,
+                options=devices_menu[0],
                 optionHeight=50,
                 clearable=False,
                 value=None,
@@ -92,7 +75,7 @@ def then_row_create(todo):
                         'type': 'then-device-dropdown',
                         'index': n_row
                     },
-                    options=devices_commands,
+                    options=devices_menu[1],
                     clearable=False,
                     value=None,
                     searchable=False,
@@ -200,7 +183,7 @@ def then_row_create(todo):
                         'type': 'then-scene-dropdown',
                         'index': n_row
                     },
-                    options=[x['name'] for x in saves],
+                    options=sorted(scene_names),
                     clearable=False,
                     searchable=False,
                     style={'width': '233px'}
@@ -244,23 +227,25 @@ def then_row_create(todo):
 #        justify='around'
     )
 
+def dyn_layout():
+    def list_sort(elem):
+        return elem['label']
 
-app = Dash(
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
-    suppress_callback_exceptions=True,
-    meta_tags=[{
-        "name": "viewport",
-        "content": "width=device-width, initial-scale=1, maximum-scale=1"
-    }]
-)
-app.layout = html.Div([
+    for ind, prop in enumerate(('states', 'commands')):
+        devices_menu[ind] = [{'label': x['name'] + ' ' + x.get('room', ''), 'value': x}
+                     for i, x in enumerate(devices) if prop in x]
+        devices_menu[ind].sort(key=list_sort)
+    scene_names.clear()
+    with open(saves_json) as json_file:
+        scene_names.update({x['name'] for x in json.load(json_file)})
+    count[0], count[1] = 0, 1
+    return html.Div([
     dcc.Location(id='url', refresh=True),
     dbc.Row([
-        html.Div(
-            id='load-div',
-            children=[dcc.Dropdown(
+        html.Div([
+            dcc.Dropdown(
                 id='load-dropdown',
-                options=[],
+                options=sorted(scene_names),
                 placeholder='Загрузить',
                 clearable=False,
                 searchable=False,
@@ -310,8 +295,19 @@ app.layout = html.Div([
     )
 ])
 
+app = Dash(
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    suppress_callback_exceptions=True,
+    meta_tags=[{
+        "name": "viewport",
+        "content": "width=device-width, initial-scale=1, maximum-scale=1"
+    }]
+)
+app.layout = dyn_layout
+
 @callback(
     Output({'type': 'if-feature-div', 'index': MATCH}, 'children'),
+    Output({'type': 'if-device-dropdown', 'index': MATCH}, 'disabled'),
     Input({'type': 'if-device-dropdown', 'index': MATCH}, 'value'),
     State({'type': 'if-device-dropdown', 'index': MATCH}, 'id'),
     prevent_initial_call=True
@@ -319,8 +315,8 @@ app.layout = html.Div([
 def display_if_feature(device, id_):
     options, disabled = [], True
     if device is not None:
-        options, disabled = [{'label': devices[device]['features'][x]['name'], 'value': x}
-             for x in devices[device]['states']], False
+        options, disabled = [{'label': device['features'][x]['name'], 'value': x}
+             for x in device['states']], False
     return [dcc.Dropdown(
         id={
             'type': 'if-feature-dropdown',
@@ -331,10 +327,11 @@ def display_if_feature(device, id_):
         searchable=False,
         style={'width': '179px'},
         clearable=False
-    )]
+    )], True
 
 @callback(
     Output({'type': 'if-value-div', 'index': MATCH}, 'children'),
+    Output({'type': 'if-feature-dropdown', 'index': MATCH}, 'disabled'),
     Input({'type': 'if-feature-dropdown', 'index': MATCH}, 'value'),
     [State({'type': 'if-device-dropdown', 'index': MATCH}, 'value'),
      State({'type': 'if-feature-dropdown', 'index': MATCH}, 'id')],
@@ -347,14 +344,14 @@ def display_if_value(feature, device, id_):
         'index': id_['index']
     }
     if feature is not None:
-        if devices[device]['features'][feature]['type'] in ('bool', 'enum'):
+        if device['features'][feature]['type'] in ('bool', 'enum'):
             return [dcc.Dropdown(
                 id=id,
                 style={'width': '79px'},
                 clearable=False,
                 searchable=False,
-                options=devices[device]['features'][feature].get('values', ['True', 'False'])
-            )]
+                options=device['features'][feature].get('values', ['True', 'False'])
+            )], True
         disabled = False
     return [dcc.Input(
         id=id,
@@ -362,7 +359,7 @@ def display_if_value(feature, device, id_):
 #        placeholder='>1',
         value=None,
         disabled=disabled
-    )]
+    )], not disabled
 
 @callback(
     Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'options'),
@@ -406,8 +403,8 @@ def display_then_feature(device, id_):
             'type': 'then-feature-dropdown',
             'index': id_['index']
         },
-        options=[{'label': devices[device]['features'][x]['name'], 'value': x}
-             for x in devices[device]['commands']],
+        options=[{'label': device['features'][x]['name'], 'value': x}
+             for x in device['commands']],
         clearable=False,
         searchable=False,
         style={'width': '179px'}
@@ -427,13 +424,13 @@ def display_then_value(feature, device, id_):
         'index': id_['index']
     }
     if feature is not None:
-        if devices[device]['features'][feature]['type'] in ('bool', 'enum'):
+        if device['features'][feature]['type'] in ('bool', 'enum'):
             return [dcc.Dropdown(
                 id=id,
                 style={'width': '79px'},
                 clearable=False,
                 searchable=False,
-                options=devices[device]['features'][feature].get('values', ['True', 'False'])
+                options=device['features'][feature].get('values', ['True', 'False'])
             )]
         disabled = False
     return [dcc.Input(
@@ -508,7 +505,7 @@ def display_then_wait(second, minute, hour, day):
     State({'type': 'then-value-input', 'index': MATCH}, 'value'),
     prevent_initial_call=True
 )
-def display_then_wait_(n_clicks, value):
+def display_then_wait_(_, value):
     if value is None or not value.isdigit():
         return no_update
     s = int(value)
@@ -558,15 +555,6 @@ def display_save_button(name, if_todos, if_values, then_store):
                 style={'width': '109px'})
 
 @callback(
-    Output('load-dropdown', 'options'),
-    Input('url', 'id'),
-#    prevent_initial_call=True
-)
-def press_load_dropdown(_):
-    count[0], count[1] = 1, 1
-    return [{'label': x['name'], 'value': i} for i, x in enumerate(saves)]
-
-@callback(
     [Output('scene-input', 'value'),
      Output('if-row-container-div', 'children', allow_duplicate=True),
      Output('then-row-container-div', 'children', allow_duplicate=True),
@@ -575,9 +563,11 @@ def press_load_dropdown(_):
     prevent_initial_call=True,
 )
 def press_load_dropdown(value):
-    count[0] = saves[value]['count'][0]
-    count[1] = saves[value]['count'][1]
-    return saves[value]['name'], saves[value]['if_rows'], saves[value]['then_rows'], None
+    with open(saves_json) as json_file:
+        save = [x for x in json.load(json_file) if x['name'] == value][0]
+    count[0] = save['count'][0]
+    count[1] = save['count'][1]
+    return save['name'], save['if_rows'], save['then_rows'], None
 
 @app.callback(
     Output("url", "href"),
@@ -603,8 +593,8 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
                     if isinstance(children, list):
                         data = children[0]['props'].get('value')
                         if data is not None:
-                            if isinstance(data, int):
-                                line.append(devices[data]['topic'])
+                            if isinstance(data, dict):
+                                line.append(data['topic'])
                             else:
                                 line.append(data)
             if not (qnt := len(line)):
@@ -626,22 +616,21 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
                 delay += int(line[0])
         return send
 
-    save = False
-    for scene in saves:
-        if scene['name'] == name:
-            saves.remove(scene)
+    with open(saves_json, 'r+') as json_file:
+        saves = json.load(json_file)
+        json_file.seek(0)
+        save = False
+        if scene := [x for x in saves if x['name'] == name]:
+            saves.remove(scene[0])
             save = True
             send_msg('del', name)
-            break
-    if value == 'сохранить':
-        saves.append({'name': name, 'if_rows': if_rows.copy(), 'then_rows': then_rows.copy(), 'count': count.copy()})
-        save = True
-
-        row_to_send(if_rows)
-        send_msg('then', {name: row_to_send(then_rows)})
-
-    if save:
-        with open('save.json', 'w') as json_file:
+        if value == 'сохранить':
+            saves.append({'name': name, 'if_rows': if_rows, 'then_rows': then_rows, 'count': count})
+            save = True
+            row_to_send(if_rows)
+            send_msg('then', {name: row_to_send(then_rows)})
+        if save:
+            json_file.truncate(0)
             json.dump(saves, json_file, ensure_ascii=False, indent=4)
     return "/"
 

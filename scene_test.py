@@ -10,6 +10,10 @@ topic = 'scenario_test'
 client = mqtt_client.Client(client_id)
 
 if_list, then_dict = [], {}
+devices = []
+
+with open('config.json') as json_file:
+    devices.extend(json.load(json_file))
 
 def send_msg(t, msg):
     if t == 'if':
