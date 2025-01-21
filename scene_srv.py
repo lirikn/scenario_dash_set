@@ -1,12 +1,14 @@
+#! /usr/bin/python3
+
 from paho.mqtt import client as mqtt_client
 from threading import Thread, Timer, Event
 import time
 import json
 
-client_id = f'scenario-test'
+client_id = f'scenario_server'
 broker = '192.168.3.1'
-topic = 'scenario_test'
-set_topic = 'scenario_dash'
+topic = 'scene_srv'
+#set_topic = 'scenario_dash'
 scenes_file = 'scenes.json'
 
 
@@ -26,9 +28,9 @@ except:
 if_list, then_dict = scenes
 
 def seve_scene():
-#    with open(scenes_file, 'w') as json_file:
-#        json.dump(scenes, json_file, ensure_ascii=False, indent=4)
-    print(scenes)
+    with open(scenes_file, 'w') as json_file:
+        json.dump(scenes, json_file, ensure_ascii=False, indent=4)
+#    print(scenes)
 
 def stop_scene(name):
     if name in timers:
@@ -77,7 +79,7 @@ def cmnd_msg(message):
             client.unsubscribe("stat/#")
             client.subscribe("stat/#", qos=0)
     stop_scene('seve_scene')
-    timers['seve_scene'] = Timer(5, seve_scene)
+    timers['seve_scene'] = Timer(120, seve_scene)
     timers['seve_scene'].start()
 
 
@@ -127,11 +129,11 @@ def on_connect(client, userdata, flags, rc):
     if rc == 0:
         client.connected_flag = True #set flag
         print("Connected OK")
-#        client.subscribe(f"set/{set_topic}/#", qos=0)
+        client.subscribe(f"set/{topic}/actions", qos=0)
         client.subscribe("stat/#", qos=0)
-        client.subscribe(f"cmnd/{set_topic}/#", qos=0)
+        client.subscribe(f"cmnd/{topic}/#", qos=0)
         try:
-            client.publish("tele/" + topic + "/LWT", "Online", retain=1)
+            client.publish(f"tele/{topic}/LWT", "Online", retain=1)
         except:
             print("Cannot set topic 'tele/%r/LWT'" % topic)
     else:
@@ -141,14 +143,24 @@ def on_message(client, userdata, message):
     if not message:
         return
 #        perf[0] = time.perf_counter()
-#    if f"set/{set_topic}/" in message.topic:
+    if f"set/{topic}/actions" == message.topic:
+        client.unsubscribe(f"set/{topic}/actions")
+        actions.update(json.loads(str(message.payload.decode("utf-8"))))
+        for name in actions.copy():
+            if name not in then_dict:
+                action_set(name, 'delete')
+            elif actions[name] == 'run':
+                action_set(name, 'start')
+        for name in then_dict:
+            if name not in actions:
+                action_set(name, 'activate')
 #        Thread(target=set_msg, args=(message,)).start()
-    if "stat/" in message.topic:
+    elif "stat/" in message.topic:
         Thread(target=stat_msg, args=(message,)).start()
     else:
         Thread(target=cmnd_msg, args=(message,)).start()
 
-client.will_set("tele/" + topic + "/LWT", "Offline", 0, True)
+client.will_set(f"tele/{topic}/LWT", "Offline", 0, True)
 client.connected_flag = False
 client.on_connect = on_connect
 client.on_message = on_message
@@ -157,7 +169,7 @@ client.loop_start()
 
 while True:
     if pub_time and time.time() - pub_time > 0.2:
-        client.publish(f"set/{set_topic}/actions", json.dumps(actions, separators=(',', ':'), ensure_ascii=False), retain=True)
+        client.publish(f"set/{topic}/actions", json.dumps(actions, separators=(',', ':'), ensure_ascii=False), retain=True)
         pub_time = None
     time.sleep(0.1)
 

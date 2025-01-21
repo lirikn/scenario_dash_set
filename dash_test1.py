@@ -4,13 +4,11 @@ import json
 #from mqtt_send import send_msg
 from scene_test import send_msg, devices
 
-
 saves_json = 'saves.json'
-devices_menu = [[], []]
+devices_menu = {'states': [], 'commands': []}
 todos = ['Устройство', 'Задержка', 'Сценарий', 'удалить']
 count = [0, 1]
 scene_names = set()
-#scenes = {}
 
 def if_row_create():
     n_row = count[0]
@@ -22,7 +20,7 @@ def if_row_create():
                     'type': 'if-device-dropdown',
                     'index': n_row
                 },
-                options=devices_menu[0],
+                options=devices_menu['states'],
                 optionHeight=50,
                 clearable=False,
                 value=None,
@@ -75,7 +73,7 @@ def then_row_create(todo):
                         'type': 'then-device-dropdown',
                         'index': n_row
                     },
-                    options=devices_menu[1],
+                    options=devices_menu['commands'],
                     clearable=False,
                     value=None,
                     searchable=False,
@@ -108,6 +106,10 @@ def then_row_create(todo):
                         'type': 'then-value-input',
                         'index': n_row
                     },
+                    type='number',
+                    min=0,
+                    max=86399999,
+                    step=1,
                     style={'width': '79px', 'height': '35px'}
                 )],
                 style={'width': '80px'}
@@ -128,7 +130,11 @@ def then_row_create(todo):
                         'type': 'then-wait-day',
                         'index': n_row
                     },
-                    value='0',
+                    value=0,
+                    type='number',
+                    min=0,
+                    max=999,
+                    step=1,
                     style={'width': '34px', 'height': '35px'}
                 )],
                 style={'width': '35px'}
@@ -140,6 +146,7 @@ def then_row_create(todo):
                         'index': n_row
                     },
                     options=list(range(0, 24)),
+                    value=0,
                     clearable=False,
                     searchable=False,
                     style={'width': '49px'}
@@ -153,6 +160,7 @@ def then_row_create(todo):
                         'index': n_row
                     },
                     options=list(range(0, 60)),
+                    value=0,
                     clearable=False,
                     searchable=False,
                     style={'width': '49px'}
@@ -231,10 +239,10 @@ def dyn_layout():
     def list_sort(elem):
         return elem['label']
 
-    for ind, prop in enumerate(('states', 'commands')):
-        devices_menu[ind] = [{'label': x['name'] + ' ' + x.get('room', ''), 'value': x}
-                     for i, x in enumerate(devices) if prop in x]
-        devices_menu[ind].sort(key=list_sort)
+    for prop in devices_menu:
+        devices_menu[prop] = [{'label': device['name'] + ' ' + device.get('room', ''), 'value': uuid}
+             for uuid, device in devices.items() if prop in device]
+        devices_menu[prop].sort(key=list_sort)
     scene_names.clear()
     with open(saves_json) as json_file:
         scene_names.update({x['name'] for x in json.load(json_file)})
@@ -295,6 +303,7 @@ def dyn_layout():
     )
 ])
 
+
 app = Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
     suppress_callback_exceptions=True,
@@ -307,16 +316,16 @@ app.layout = dyn_layout
 
 @callback(
     Output({'type': 'if-feature-div', 'index': MATCH}, 'children'),
-    Output({'type': 'if-device-dropdown', 'index': MATCH}, 'disabled'),
+#    Output({'type': 'if-device-dropdown', 'index': MATCH}, 'disabled'),
     Input({'type': 'if-device-dropdown', 'index': MATCH}, 'value'),
     State({'type': 'if-device-dropdown', 'index': MATCH}, 'id'),
     prevent_initial_call=True
 )
-def display_if_feature(device, id_):
+def display_if_feature(uuid, id_):
     options, disabled = [], True
-    if device is not None:
-        options, disabled = [{'label': device['features'][x]['name'], 'value': x}
-             for x in device['states']], False
+    if uuid is not None:
+        options, disabled = [{'label': devices[uuid]['features'][x]['name'], 'value': x}
+             for x in devices[uuid]['states']], False
     return [dcc.Dropdown(
         id={
             'type': 'if-feature-dropdown',
@@ -327,31 +336,31 @@ def display_if_feature(device, id_):
         searchable=False,
         style={'width': '179px'},
         clearable=False
-    )], True
+    )] #, True
 
 @callback(
     Output({'type': 'if-value-div', 'index': MATCH}, 'children'),
-    Output({'type': 'if-feature-dropdown', 'index': MATCH}, 'disabled'),
+#    Output({'type': 'if-feature-dropdown', 'index': MATCH}, 'disabled'),
     Input({'type': 'if-feature-dropdown', 'index': MATCH}, 'value'),
     [State({'type': 'if-device-dropdown', 'index': MATCH}, 'value'),
      State({'type': 'if-feature-dropdown', 'index': MATCH}, 'id')],
     prevent_initial_call=True
 )
-def display_if_value(feature, device, id_):
+def display_if_value(feature, uuid, id_):
     disabled = True
     id = {
         'type': 'if-value-input',
         'index': id_['index']
     }
     if feature is not None:
-        if device['features'][feature]['type'] in ('bool', 'enum'):
+        if devices[uuid]['features'][feature]['type'] in ('bool', 'enum'):
             return [dcc.Dropdown(
                 id=id,
                 style={'width': '79px'},
                 clearable=False,
                 searchable=False,
-                options=device['features'][feature].get('values', ['True', 'False'])
-            )], True
+                options=devices[uuid]['features'][feature].get('values', ['True', 'False'])
+            )] #, True
         disabled = False
     return [dcc.Input(
         id=id,
@@ -359,7 +368,7 @@ def display_if_value(feature, device, id_):
 #        placeholder='>1',
         value=None,
         disabled=disabled
-    )], not disabled
+    )] #, not disabled
 
 @callback(
     Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'options'),
@@ -395,16 +404,16 @@ def display_if_container_div(values):
     State({'type': 'then-device-dropdown', 'index': MATCH}, 'id'),
     prevent_initial_call=True
 )
-def display_then_feature(device, id_):
-    if device is None:
+def display_then_feature(uuid, id_):
+    if uuid is None:
         return
     return [dcc.Dropdown(
         id={
             'type': 'then-feature-dropdown',
             'index': id_['index']
         },
-        options=[{'label': device['features'][x]['name'], 'value': x}
-             for x in device['commands']],
+        options=[{'label': devices[uuid]['features'][x]['name'], 'value': x}
+             for x in devices[uuid]['commands']],
         clearable=False,
         searchable=False,
         style={'width': '179px'}
@@ -417,20 +426,20 @@ def display_then_feature(device, id_):
      State({'type': 'then-feature-dropdown', 'index': MATCH}, 'id')],
     prevent_initial_call=True
 )
-def display_then_value(feature, device, id_):
+def display_then_value(feature, uuid, id_):
     disabled = True
     id = {
         'type': 'then-value-input',
         'index': id_['index']
     }
     if feature is not None:
-        if device['features'][feature]['type'] in ('bool', 'enum'):
+        if devices[uuid]['features'][feature]['type'] in ('bool', 'enum'):
             return [dcc.Dropdown(
                 id=id,
                 style={'width': '79px'},
                 clearable=False,
                 searchable=False,
-                options=device['features'][feature].get('values', ['True', 'False'])
+                options=devices[uuid]['features'][feature].get('values', ['True', 'False'])
             )]
         disabled = False
     return [dcc.Input(
@@ -492,9 +501,9 @@ def display_then_button(then_store):
     prevent_initial_call=True
 )
 def display_then_wait(second, minute, hour, day):
-    if None in (second, minute, hour, day) or not day.isdigit() :
+    if None in (second, minute, hour, day):
         return no_update
-    return str(int(day) * 86400 + hour * 3600 + minute * 60 + second)
+    return day * 86400 + hour * 3600 + minute * 60 + second
 
 @callback(
     [Output({'type': 'then-wait-second', 'index': MATCH}, 'value'),
@@ -505,13 +514,12 @@ def display_then_wait(second, minute, hour, day):
     State({'type': 'then-value-input', 'index': MATCH}, 'value'),
     prevent_initial_call=True
 )
-def display_then_wait_(_, value):
-    if value is None or not value.isdigit():
+def display_then_wait_(_, s):
+    if s is None:
         return no_update
-    s = int(value)
     h = s % 86400
     m = h % 3600
-    return m % 60, m // 60, h // 3600, str(s // 86400)
+    return m % 60, m // 60, h // 3600, s // 86400
 
 @callback(
     Output({'type': 'then-scene-div', 'index': MATCH}, 'children'),
@@ -593,10 +601,9 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
                     if isinstance(children, list):
                         data = children[0]['props'].get('value')
                         if data is not None:
-                            if isinstance(data, dict):
-                                line.append(data['topic'])
-                            else:
-                                line.append(data)
+                            if data in devices:
+                                data = devices[data]['topic']
+                            line.append(data)
             if not (qnt := len(line)):
                 continue
             if qnt == 4:
@@ -612,8 +619,8 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
             elif qnt == 2:
                 send.append({'delay': delay, 'scene': line[0], 'action': line[1]})
                 delay = 0
-            elif line[0].isdigit():
-                delay += int(line[0])
+            else:
+                delay += line[0]
         return send
 
     with open(saves_json, 'r+') as json_file:

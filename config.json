@@ -27,7 +27,7 @@
         "name": "Sonoff_4CH",
         "uuid": "6001948501B7",
         "topic": "Sonoff_4CH",
-        "states": ["POWER1", "POWER2", "POWER3", "TIME_OF_DAY", "RF"],
+        "states": ["POWER1", "POWER2", "POWER3", "TIME_OF_DAY", "TIME", "RF"],
         "commands": ["POWER1", "POWER2", "POWER3", "RF"],
         "features": {
             "POWER3": {
