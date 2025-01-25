@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 from paho.mqtt import client as mqtt_client
 import json
 
@@ -27,7 +25,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, message):
     actions.clear()
     actions.update(json.loads(str(message.payload.decode("utf-8"))))
-    print(actions)
+#    print(actions)
 
 def send_msg(action, msg):
     client.publish(f'cmnd/{topic_srv}/{action}', json.dumps(msg, separators=(',', ':'), ensure_ascii=False))

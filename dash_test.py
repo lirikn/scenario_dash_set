@@ -1,12 +1,13 @@
 #! /usr/bin/python3
 
-from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, Patch, callback, no_update
+from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, callback, no_update
 import dash_bootstrap_components as dbc
 import json
 import time
 #from mqtt_send import send_msg, actions
 from dash_class import ScenarioClass, devices
 
+#devices = {}
 actions = {}
 def send_msg(*args):
     pass
@@ -18,50 +19,44 @@ menu = [
     {'label': 'сохранить', 'value': 'save'},
     {'label': 'удалить', 'value': 'delete'},
     {'label': 'включить', 'value': 'activate'},
-    {'label': 'выключить', 'value': 'diactivate'},
+    {'label': 'выключить', 'value': 'deactivate'},
     {'label': 'запустить', 'value': 'start'},
     {'label': 'прервать', 'value': 'stop'}
 ]
-#devices = {}
 
 if_class = ScenarioClass('if')
 then_class = ScenarioClass('then')
 
 def dyn_layout():
-    def list_sort(elem):
-        return elem['label']
     devices.clear()
     with open(config_json) as json_file:
         for device in json.load(json_file):
             devices[device['uuid']] = device
-    if_class.index = 0
-    if_class.devices = sorted([{'label': device['name'] + ' ' + device.get('room', ''), 'value': uuid}
-         for uuid, device in devices.items() if 'states' in device], key = list_sort)
-    then_class.index = 0
-    then_class.devices = sorted([{'label': device['name'] + ' ' + device.get('room', ''), 'value': uuid}
-         for uuid, device in devices.items() if 'commands' in device], key = list_sort)
+    if_class.setup()
+    then_class.setup()
     then_class.scenes = sorted(actions.keys())
     return html.Div([
     dcc.Location(id='url', refresh=True),
     dbc.Row([
-        html.Div([
-            dcc.Dropdown(
+        html.Div(
+            children=dcc.Dropdown(
                 id='load-dropdown',
                 options=then_class.scenes,
                 placeholder='Загрузить',
                 clearable=False,
                 searchable=False,
                 style={'width': '233px'}
-            )],
+            ),
             style={'width': '235px'}
         ),
-        html.Div([
-            dcc.Input(
+        html.Div(
+            children=dcc.Input(
                 placeholder='Название сценария',
                 id='scene-input',
                 value='',
                 debounce=True,
-                style={'width': '214px', 'height': '35px'}            )],
+                style={'width': '214px', 'height': '35px'}
+            ),
             style={'width': '215px'}
         ),
         html.Div(
@@ -82,7 +77,6 @@ def dyn_layout():
     )
 ])
 
-
 app = Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
     suppress_callback_exceptions=True,
@@ -92,7 +86,6 @@ app = Dash(
     }]
 )
 app.layout = dyn_layout
-
 
 @callback(
     Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'options'),
@@ -106,53 +99,18 @@ def display_if_todo_options(value):
     return options
 
 @callback(
-    Output('if-row-container-div', 'children'),
-    Input({'type': 'if-todo-dropdown', 'index': ALL}, 'value'),
-    prevent_initial_call=True
-)
-def display_if_container_div(values):
-    children = Patch()
-    if 'удалить' in values:
-        del children[values.index('удалить')]
-    if values[-1] != 'ТОГДА':
-        children.append(if_class.create_row('Устройство'))
-    else:
-        n = values.index('ТОГДА') + 1
-        for i in range(n, len(values)):
-            del children[n]
-    return children
-
-
-@callback(
-    Output('then-row-container-div', 'children'),
-    Input({'type': 'then-todo-dropdown', 'index': ALL}, 'value'),
-    prevent_initial_call=True
-)
-def display_then_container_div(values):
-    children = Patch()
-    for todo in todos:
-        if todo in values:
-            inx = values.index(todo)
-            if todo == 'удалить':
-                del children[inx]
-                break
-            children.insert(inx, then_class.create_row(todo))
-            break
-    return children
-
-@callback(
     [Output({'type': 'then-todo-dropdown', 'index': ALL}, 'options'),
      Output({'type': 'then-todo-dropdown', 'index': ALL}, 'value')],
     Input({'type': 'then-value-input', 'index': ALL}, 'value'),
     State({'type': 'then-todo-dropdown', 'index': ALL}, 'id'),
 )
-def display_theb_todo_options(values, ids):
+def display_then_todo_options(values, ids):
     lines = len(ids) - 1
     if not lines or len(values) == lines and all(values):
        options = [todos] * lines
        options.append(todos[0:-1])
     else:
-       options = [['удалить']] * (lines)
+       options = [['удалить']] * lines
        options.append([''])
     return options, [None] * (lines + 1)
 
@@ -191,10 +149,10 @@ def display_then_wait_(_, s):
     State({'type': 'then-scene-dropdown', 'index': MATCH}, 'id'),
     prevent_initial_call=True
 )
-def display_then_feature(value, id_):
+def display_then_scene(value, id_):
     if value is None:
         return
-    return [dcc.Dropdown(
+    return dcc.Dropdown(
         id={
             'type': 'then-value-input',
             'index': id_['index']
@@ -203,7 +161,7 @@ def display_then_feature(value, id_):
         clearable=False,
         searchable=False,
         style={'width': '144px'}
-    )]
+    )
 
 @callback(
     Output('save-delete-div', 'children'),
@@ -284,12 +242,11 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
             for row in rows:
                 line = []
                 for props in row['props'].get('children', []):
-                    children = props['props'].get('children')
-                    if children:
+                    if children := props['props'].get('children'):
                         if children == 'сек.':
                             break
-                        if isinstance(children, list):
-                            data = children[0]['props'].get('value')
+                        if isinstance(children, dict):
+                            data = children['props'].get('value')
                             if data is not None:
                                 if data in devices:
                                     data = devices[data]['topic']
@@ -315,7 +272,7 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
             return send
         send_list.append(name)
         row_to_send(if_rows)
-        send_list.append({name: row_to_send(then_rows)})
+        send_list.append(row_to_send(then_rows))
         send_msg(value, send_list)
     else:
         send_msg(value, name)

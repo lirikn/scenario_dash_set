@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 
 from paho.mqtt import client as mqtt_client
-from threading import Thread, Timer, Event
+from threading import Thread, Timer
 import time
 import json
 
@@ -16,7 +16,7 @@ client = mqtt_client.Client(client_id)
 
 timers = {}
 actions = {}
-pub_time = None
+pub_time = 0
 
 
 try:
@@ -27,30 +27,30 @@ except:
 
 if_list, then_dict = scenes
 
-def seve_scene():
+def save_scene():
     with open(scenes_file, 'w') as json_file:
         json.dump(scenes, json_file, ensure_ascii=False, indent=4)
-#    print(scenes)
 
 def stop_scene(name):
     if name in timers:
         timers.pop(name).cancel()
 
 def action_set(name, action):
-    print(name, action)
+#    print(name, action)
     if action == 'activate':
         actions[name] = 'idle'
     elif action == 'delete':
+        stop_scene(name)
         del actions[name]
     elif actions.get(name) == 'deactivated':
         return
-    elif action == 'diactivate':
+    elif action == 'deactivate':
         actions[name] = 'deactivated'
         stop_scene(name)
     elif action == 'start':
         actions[name] = 'run'
         start_scene(name, then_dict[name].copy())
-    elif action == 'stop':
+    elif action in ('stop', 'save'):
         actions[name] = 'idle'
         stop_scene(name)
     global pub_time
@@ -58,30 +58,25 @@ def action_set(name, action):
 
 def cmnd_msg(message):
     action = message.topic.split('/')[-1]
-    name = json.loads(str(message.payload.decode("utf-8")))
-    if action != 'save':
-        action_set(name, action)
-        if action != 'delete':
-            return
-        name = [name]
-    for item in name:
-        if isinstance(item, str):
-            stop_scene(item)
-            for line in if_list:
-                if line[-1] == item:
-                    if_list.remove(line)
-            if item in then_dict:
-                del then_dict[item]
-        elif isinstance(item, list):
-            if_list.append(item)
-        else:
-            then_dict.update(item)
-            action_set(list(item.keys())[0], 'activate')
-            client.unsubscribe("stat/#")
-            client.subscribe("stat/#", qos=0)
-    stop_scene('seve_scene')
-    timers['seve_scene'] = Timer(120, seve_scene)
-    timers['seve_scene'].start()
+    msg = json.loads(str(message.payload.decode("utf-8")))
+    print(msg)
+    name = msg.pop(0) if isinstance(msg, list) else msg
+    action_set(name, action)
+    if action not in ('delete', 'save'):
+        return
+    for line in if_list:
+        if line[-1] == name:
+            if_list.remove(line)
+    if action == 'save':
+        then_dict[name] = msg.pop()
+        if_list.extend(msg)
+        client.unsubscribe("stat/#")
+        client.subscribe("stat/#", qos=0)
+    else:
+        del then_dict[name]
+    stop_scene('save_scene')
+    timers['save_scene'] = Timer(120, save_scene)
+    timers['save_scene'].start()
 
 
 #perf = [0, 0]
@@ -171,6 +166,6 @@ client.loop_start()
 while True:
     if pub_time and time.time() - pub_time > 0.2:
         client.publish(f"set/{topic}/actions", json.dumps(actions, separators=(',', ':'), ensure_ascii=False), retain=True)
-        pub_time = None
+        pub_time = 0
     time.sleep(0.1)
 
