@@ -37,11 +37,12 @@ def stop_scene(name):
         timers.pop(name).cancel()
 
 def action_set(name, action):
+    print(name, action)
     if action == 'activate':
         actions[name] = 'idle'
     elif action == 'delete':
         del actions[name]
-    elif actions[name] == 'deactivated':
+    elif actions.get(name) == 'deactivated':
         return
     elif action == 'diactivate':
         actions[name] = 'deactivated'

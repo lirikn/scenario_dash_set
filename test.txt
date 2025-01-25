@@ -1,0 +1,110 @@
+[
+            html.P("Задержка:",
+                style={'width': '80px', 'height': '10px'}
+            ),
+            html.Div([
+                dcc.Input(
+                    id={
+                        'type': 'then-value-input',
+                        'index': n_row
+                    },
+                    type='number',
+                    min=0,
+                    max=86399999,
+                    step=1,
+                    style={'width': '79px', 'height': '35px'}
+                )],
+                style={'width': '80px'}
+            ),
+            html.P("сек.",
+                style={'width': '50px', 'height': '10px'}
+            ),
+            html.Button("-->",
+                id={
+                    'type': 'then-wait-button',
+                    'index': n_row
+                },
+                style={'width': '55px', 'height': '35px'}
+            ),
+            html.Div([
+                dcc.Input(
+                    id={
+                        'type': 'then-wait-day',
+                        'index': n_row
+                    },
+                    value=0,
+                    type='number',
+                    min=0,
+                    max=999,
+                    step=1,
+                    style={'width': '34px', 'height': '35px'}
+                )],
+                style={'width': '35px'}
+            ),
+            html.Div([
+                dcc.Dropdown(
+                    id={
+                        'type': 'then-wait-hour',
+                        'index': n_row
+                    },
+                    options=list(range(0, 24)),
+                    value=0,
+                    clearable=False,
+                    searchable=False,
+                    style={'width': '49px'}
+                )],
+                style={'width': '50px'}
+            ),
+            html.Div([
+                dcc.Dropdown(
+                    id={
+                        'type': 'then-wait-minute',
+                        'index': n_row
+                    },
+                    options=list(range(0, 60)),
+                    value=0,
+                    clearable=False,
+                    searchable=False,
+                    style={'width': '49px'}
+                )],
+                style={'width': '50px'}
+            ),
+            html.Div([
+                dcc.Dropdown(
+                    id={
+                        'type': 'then-wait-second',
+                        'index': n_row
+                    },
+                    options=list(range(0, 60)),
+                    clearable=False,
+                    searchable=False,
+                    style={'width': '49px'}
+                )],
+                style={'width': '60px'}
+            )
+        ],
+[
+            html.P("Сценарий:",
+                style={'width': '80px', 'height': '10px'}
+            ),
+            html.Div([
+                dcc.Dropdown(
+                    id={
+                        'type': 'then-scene-dropdown',
+                        'index': n_row
+                    },
+                    options=sorted(scene_names),
+                    clearable=False,
+                    searchable=False,
+                    style={'width': '233px'}
+                )],
+                style={'width': '235px'}
+            ),
+            html.Div(
+                id={
+                    'type': 'then-scene-div',
+                    'index': n_row
+                },
+                style={'width': '145px'}
+            )
+        ]
