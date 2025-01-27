@@ -2,7 +2,18 @@ from dash import dcc, html, callback, Output, Input, State, MATCH, ALL, Patch, n
 import dash_bootstrap_components as dbc
 
 devices = {}
-todos = ['Устройство', 'Задержка', 'Сценарий', 'удалить']
+if_todos = [
+    {'label': 'И', 'value': 1},
+    {'label': 'ИЛИ', 'value': 2},
+    {'label': 'ТОГДА', 'value': 3},
+    {'label': 'удалить', 'value': 0}
+]
+then_todos = [
+    {'label': 'Устройство', 'value': 1},
+    {'label': 'Задержка', 'value': 2},
+    {'label': 'Сценарий', 'value': 3},
+    {'label': 'удалить', 'value': 0}
+]
 
 class ScenarioClass:
 
@@ -22,20 +33,12 @@ class ScenarioClass:
         self.devices = sorted([{'label': device['name'] + ' ' + device.get('room', ''), 'value': uuid}
             for uuid, device in devices.items() if self.features in device], key = list_sort)
 
-    def create_row(self, choice=None):
-        placeholder = 'Вставить'
-        if choice == todos[0]:
-            row = device_row(self.cond, self.index, self.devices)
-        elif choice == todos[2]:
-            row = scene_row(self.index, self.scenes)
-        elif choice == todos[1]:
-            row = delay_row(self.index)
-        else:
-            placeholder = 'Добавить'
-            row = []
+    def create_row(self, choice=0):
+        row, placeholder = link_func[choice](self.cond, self.index, self.devices, self.scenes)
         row.append(create_todo(self.cond, self.index, placeholder))
         self.index += 1
         return dbc.Row(row, align='center')
+
 
 def create_todo(cond, index, placeholder):
     return html.Div(
@@ -44,8 +47,8 @@ def create_todo(cond, index, placeholder):
                 'type': cond + '-todo-dropdown',
                 'index': index
             },
-            options=['ТОГДА'],
-            value='ТОГДА',
+            options=[if_todos[2]],
+            value=3 if cond == 'if' else None,
             style={'width': '100px'},
             placeholder=placeholder,
             clearable=False,
@@ -54,7 +57,10 @@ def create_todo(cond, index, placeholder):
         style={'width': '100px'}
     )
 
-def device_row(cond, index, options):
+def null_row(cond, index, options, names):
+    return [], 'Добавить'
+
+def device_row(cond, index, options, names):
     return [html.Div(
         children=dcc.Dropdown(
             options=options,
@@ -83,9 +89,9 @@ def device_row(cond, index, options):
             },
             style={'width': '80px'}
         )
-    ]
+    ], 'Вставить'
 
-def delay_row(index):
+def delay_row(cond, index, options, names):
     return [html.P("Задержка:",
             style={'width': '80px', 'height': '10px'}
         ),
@@ -169,9 +175,9 @@ def delay_row(index):
             ),
             style={'width': '60px'}
         )
-    ]
+    ], 'Вставить'
 
-def scene_row(index, names):
+def scene_row(cond, index, options, names):
     return [html.P("Сценарий:",
             style={'width': '80px', 'height': '10px'}
         ),
@@ -195,17 +201,18 @@ def scene_row(index, names):
             },
             style={'width': '145px'}
         )
-    ]
+    ], 'Вставить'
+
+link_func = [null_row, device_row, delay_row, scene_row]
 
 def if_callbacks_func():
     @callback(
         Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'options'),
         Input({'type': 'if-value-input', 'index': MATCH}, 'value'),
-        prevent_initial_call=True
+#        prevent_initial_call=True
     )
     def display_if_todo_options(value):
-        options = ['И', 'ИЛИ', 'ТОГДА', 'удалить']
-        return options if value else options[2:]
+        return if_todos if value else if_todos[2:]
 
 def then_callbacks_func():
     @callback(
@@ -217,10 +224,10 @@ def then_callbacks_func():
     def display_then_todo_options(values, ids):
         lines = len(ids) - 1
         if not lines or len(values) == lines and all(values):
-            options = [todos] * lines
-            options.append(todos[0:-1])
+            options = [then_todos] * lines
+            options.append(then_todos[0:-1])
         else:
-            options = [[todos[-1]]] * lines
+            options = [[then_todos[-1]]] * lines
             options.append([''])
         return options, [None] * (lines + 1)
 
@@ -316,17 +323,17 @@ def callbacks_func(cond, features, create_row):
     )
     def display_container_div(values):
         children = Patch()
-        if 'удалить' in values:
-            del children[values.index('удалить')]
+        if 0 in values:
+            del children[values.index(0)]
         if cond == 'if':
-            if values[-1] != 'ТОГДА':
-                children.append(create_row(todos[0]))
+            if values[-1] != 3:
+                children.append(create_row(1))
             else:
-                idx = values.index('ТОГДА') + 1
+                idx = values.index(3) + 1
                 for i in range(idx, len(values)):
                     del children[idx]
         else:
-            if todo := [[i, t] for i, t in enumerate(values) if t not in (None, 'удалить')]:
+            if todo := [[i, t] for i, t in enumerate(values) if t]:
                 children.insert(todo[0][0], create_row(todo[0][1]))
         return children
 
@@ -340,8 +347,8 @@ if __name__ == '__main__':
     then_row.devices = ['then_test']
     then_row.scenes = ['scene_test']
     print(if_row.create_row())
-    print(then_row.create_row('Сценарий'))
+    print(then_row.create_row(3))
     print(if_row.create_row())
-    print(then_row.create_row('Задержка'))
+    print(then_row.create_row(2))
 
 
