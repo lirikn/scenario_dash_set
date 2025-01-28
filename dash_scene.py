@@ -5,12 +5,13 @@ import dash_bootstrap_components as dbc
 import json
 import time
 #from mqtt_send import send_msg, actions
-from dash_class import ScenarioClass, devices
+#from dash_class import ScenarioClass, devices
+from test_class import ScenarioClass, devices
 
 #devices = {}
 actions = {}
 def send_msg(*args):
-    pass
+    print(*args)
 
 saves_json = 'saves.json'
 config_json = 'config.json'
@@ -66,7 +67,7 @@ def dyn_layout():
     ),
     html.Div(
         id='if-row-container-div',
-        children=[if_class.create_row('Устройство')],
+        children=[if_class.create_row(1)],
         style={'width': '560px'}
     ),
     html.Div(
@@ -199,7 +200,7 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
                     continue
                 if qnt == 4:
                     send.append({'topic': line[0], 'feature': line[1], 'value': line[2]})
-                    if line[3] == 'И':
+                    if line[3] == 1:
                         continue
                     send.append(name)
                     send_list.append(send)
@@ -222,19 +223,19 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
         if value != 'delete':
             return no_update
 
-    with open(saves_json, 'r+') as json_file:
-        saves = json.load(json_file)
-        json_file.seek(0)
-        if value == 'save':
-            while name not in actions:
-                time.sleep(0.1)
-            saves[name] = {'if_rows': if_rows, 'then_rows': then_rows, 'if_index': if_class.index, 'then_index': then_class.index}
-        elif name in saves:
-            while name in actions:
-                time.sleep(0.1)
-            del saves[name]
-        json_file.truncate(0)
-        json.dump(saves, json_file, ensure_ascii=False, indent=4)
+#    with open(saves_json, 'r+') as json_file:
+#        saves = json.load(json_file)
+#        json_file.seek(0)
+#        if value == 'save':
+#            while name not in actions:
+#                time.sleep(0.1)
+#            saves[name] = {'if_rows': if_rows, 'then_rows': then_rows, 'if_index': if_class.index, 'then_index': then_class.index}
+#        elif name in saves:
+#            while name in actions:
+#                time.sleep(0.1)
+#            del saves[name]
+#        json_file.truncate(0)
+#        json.dump(saves, json_file, ensure_ascii=False, indent=4)
     return "/"
 
 if __name__ == '__main__':

@@ -1,12 +1,12 @@
 #! /usr/bin/python3
 
-from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, callback, no_update
-import dash_bootstrap_components as dbc
+#from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, callback, no_update
+#import dash_bootstrap_components as dbc
 import json
 import time
 #from mqtt_send import send_msg, actions
 #from dash_class import ScenarioClass, devices
-from test_class import ScenarioClass, devices
+from test_class import *
 
 #devices = {}
 actions = {}
@@ -24,8 +24,8 @@ menu = [
     {'label': 'прервать', 'value': 'stop'}
 ]
 
-if_class = ScenarioClass('if')
-then_class = ScenarioClass('then')
+if_class = SceneIfClass()
+then_class = SceneThenClass()
 
 def dyn_layout():
     devices.clear()
@@ -67,7 +67,7 @@ def dyn_layout():
     ),
     html.Div(
         id='if-row-container-div',
-        children=[if_class.create_row(1)],
+        children=[if_class.create_row()],
         style={'width': '560px'}
     ),
     html.Div(
