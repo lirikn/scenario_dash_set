@@ -1,17 +1,18 @@
 from dash import Dash, dcc, html, callback, Output, Input, State, MATCH, ALL, Patch, no_update
 import dash_bootstrap_components as dbc
 
+devices = {}
 
 class SceneIfClass:
-    cond = 'if'
-    todos = [
-        {'label': 'И', 'value': 1},
-        {'label': 'ИЛИ', 'value': 2},
-        {'label': 'ТОГДА', 'value': 3},
-        {'label': 'удалить', 'value': 0}
-    ]
-
     def __init__(self):
+        self.cond = 'if'
+        self.features = 'states'
+        self.todos = [
+            {'label': 'И', 'value': 1},
+            {'label': 'ИЛИ', 'value': 2},
+            {'label': 'ТОГДА', 'value': 3},
+            {'label': 'удалить', 'value': 0}
+        ]
 
         @callback(
             Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'options'),
@@ -31,10 +32,11 @@ class SceneIfClass:
             State({'type': self.cond + '-device-dropdown', 'index': MATCH}, 'id'),
             prevent_initial_call=True
         )
-        def display_feature(topic, id_):
-            if topic is None:
+        def display_feature(uuid, id_):
+            if uuid is None:
                 return
-            options = [{'label': x['name'], 'value': key} for key, x in self.features[topic].items()]
+            options = [{'label': devices[uuid]['features'][x]['name'], 'value': x}
+                       for x in devices[uuid][self.features]]
             return dcc.Dropdown(
                 id={
                     'type': self.cond + '-feature-dropdown',
@@ -53,10 +55,10 @@ class SceneIfClass:
              State({'type': self.cond + '-feature-dropdown', 'index': MATCH}, 'id')],
             prevent_initial_call=True
         )
-        def display_value(feature, topic, id_):
+        def display_value(feature, uuid, id_):
             disabled = True
             if feature is not None:
-                if self.features[topic][feature]['type'] in ('bool', 'enum'):
+                if devices[uuid]['features'][feature]['type'] in ('bool', 'enum'):
                     return dcc.Dropdown(
                         id={
                             'type': self.cond + '-value-input',
@@ -65,7 +67,7 @@ class SceneIfClass:
                         style={'width': '79px'},
                         clearable=False,
                         searchable=False,
-                        options=self.features[topic][feature].get('values', ['True', 'False'])
+                        options=devices[uuid]['features'][feature].get('values', ['True', 'False'])
                     )
                 disabled = False
             return dcc.Input(
@@ -152,30 +154,26 @@ class SceneIfClass:
             )
         ]
 
-    def setup(self, devices, value):
+    def setup(self):
         def list_sort(elem):
             return elem['label']
         self.index = 0
-        self.devices = []
-        self.features = {}
-        for device in devices:
-            if features := device.get(value):
-                self.devices.append({'label': device['name'] + ' ' + device.get('room', ''), 'value': device['topic']})
-                self.features[device['topic']] = {feature: device['features'][feature] for feature in features}
-        self.devices.sort(key = list_sort)
+        self.devices = sorted([{'label': device['name'] + ' ' + device.get('room', ''), 'value': uuid}
+            for uuid, device in devices.items() if self.features in device], key = list_sort)
+
 
 class SceneThenClass(SceneIfClass):
-    cond = 'then'
-    todos = [
-        {'label': 'Устройство', 'value': 1},
-        {'label': 'Задержка', 'value': 2},
-        {'label': 'Сценарий', 'value': 3},
-        {'label': 'удалить', 'value': 0}
-    ]
 
     def __init__(self):
-
         self.scenes = None
+        self.cond = 'then'
+        self.features = 'commands'
+        self.todos = [
+            {'label': 'Устройство', 'value': 1},
+            {'label': 'Задержка', 'value': 2},
+            {'label': 'Сценарий', 'value': 3},
+            {'label': 'удалить', 'value': 0}
+        ]
 
         @callback(
             [Output({'type': 'then-todo-dropdown', 'index': ALL}, 'options'),
@@ -347,15 +345,15 @@ class SceneThenClass(SceneIfClass):
         ]
 
 
-#if __name__ == '__main__':
-#    if_row = SceneIfClass()
-#    then_row = SceneThenClass()
-#    if_row.setup()
-#    then_row.setup()
-#    then_row.scenes = ['scene_test']
-#    print(if_row.create_row())
-#    print(then_row.create_row(3))
-#    print(if_row.create_row())
-#    print(then_row.create_row(2))
+if __name__ == '__main__':
+    if_row = SceneIfClass()
+    then_row = SceneThenClass()
+    if_row.setup()
+    then_row.setup()
+    then_row.scenes = ['scene_test']
+    print(if_row.create_row())
+    print(then_row.create_row(3))
+    print(if_row.create_row())
+    print(then_row.create_row(2))
 
 

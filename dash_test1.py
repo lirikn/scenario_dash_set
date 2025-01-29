@@ -1,10 +1,14 @@
 #! /usr/bin/python3
 
+#from dash import Dash, dcc, html, Input, Output, State, MATCH, ALL, callback, no_update
+#import dash_bootstrap_components as dbc
 import json
 import time
 #from mqtt_send import send_msg, actions
+#from dash_class import ScenarioClass, devices
 from test_class import *
 
+#devices = {}
 actions = {}
 def send_msg(*args):
     print(*args)
@@ -24,10 +28,12 @@ if_class = SceneIfClass()
 then_class = SceneThenClass()
 
 def dyn_layout():
+    devices.clear()
     with open(config_json) as json_file:
-        devices = json.load(json_file)
-    if_class.setup(devices, 'states')
-    then_class.setup(devices, 'commands')
+        for device in json.load(json_file):
+            devices[device['uuid']] = device
+    if_class.setup()
+    then_class.setup()
     then_class.scenes = sorted(actions.keys())
     return html.Div([
     dcc.Location(id='url', refresh=True),
@@ -186,6 +192,8 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
                         if isinstance(children, dict):
                             data = children['props'].get('value')
                             if data is not None:
+                                if data in devices:
+                                    data = devices[data]['topic']
                                 line.append(data)
                 qnt = len(line)
                 if not qnt:
