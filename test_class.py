@@ -1,9 +1,8 @@
 from dash import Dash, dcc, html, callback, Output, Input, State, MATCH, ALL, Patch, no_update
 import dash_bootstrap_components as dbc
 
-
 class SceneIfClass:
-    cond = 'if'
+    cond = 'stat'
     todos = [
         {'label': 'И', 'value': 1},
         {'label': 'ИЛИ', 'value': 2},
@@ -14,11 +13,11 @@ class SceneIfClass:
     def __init__(self):
 
         @callback(
-            Output({'type': 'if-todo-dropdown', 'index': MATCH}, 'options'),
-            Input({'type': 'if-value-input', 'index': MATCH}, 'value'),
+            Output({'type': 'stat-todo-dropdown', 'index': MATCH}, 'options'),
+            Input({'type': 'stat-value-input', 'index': MATCH}, 'value'),
             #        prevent_initial_call=True
         )
-        def display_if_todo_options(value):
+        def display_stat_todo_options(value):
             return self.todos if value else self.todos[2:]
 
         self.init()
@@ -152,20 +151,20 @@ class SceneIfClass:
             )
         ]
 
-    def setup(self, devices, value):
+    def setup(self, devices):
         def list_sort(elem):
             return elem['label']
         self.index = 0
         self.devices = []
         self.features = {}
         for device in devices:
-            if features := device.get(value):
+            if features := device.get(self.cond):
                 self.devices.append({'label': device['name'] + ' ' + device.get('room', ''), 'value': device['topic']})
                 self.features[device['topic']] = {feature: device['features'][feature] for feature in features}
         self.devices.sort(key = list_sort)
 
 class SceneThenClass(SceneIfClass):
-    cond = 'then'
+    cond = 'cmnd'
     todos = [
         {'label': 'Устройство', 'value': 1},
         {'label': 'Задержка', 'value': 2},
@@ -178,12 +177,12 @@ class SceneThenClass(SceneIfClass):
         self.scenes = None
 
         @callback(
-            [Output({'type': 'then-todo-dropdown', 'index': ALL}, 'options'),
-             Output({'type': 'then-todo-dropdown', 'index': ALL}, 'value')],
-            Input({'type': 'then-value-input', 'index': ALL}, 'value'),
-            State({'type': 'then-todo-dropdown', 'index': ALL}, 'id'),
+            [Output({'type': 'cmnd-todo-dropdown', 'index': ALL}, 'options'),
+             Output({'type': 'cmnd-todo-dropdown', 'index': ALL}, 'value')],
+            Input({'type': 'cmnd-value-input', 'index': ALL}, 'value'),
+            State({'type': 'cmnd-todo-dropdown', 'index': ALL}, 'id'),
         )
-        def display_then_todo_options(values, ids):
+        def display_cmnd_todo_options(values, ids):
             lines = len(ids) - 1
             if not lines or len(values) == lines and all(values):
                 options = [self.todos] * lines
@@ -194,28 +193,28 @@ class SceneThenClass(SceneIfClass):
             return options, [None] * (lines + 1)
 
         @callback(
-            Output({'type': 'then-value-input', 'index': MATCH}, 'value'),
-            [Input({'type': 'then-wait-second', 'index': MATCH}, 'value'),
-             Input({'type': 'then-wait-minute', 'index': MATCH}, 'value'),
-             Input({'type': 'then-wait-hour', 'index': MATCH}, 'value'),
-             Input({'type': 'then-wait-day', 'index': MATCH}, 'value')],
+            Output({'type': 'cmnd-value-input', 'index': MATCH}, 'value'),
+            [Input({'type': 'cmnd-wait-second', 'index': MATCH}, 'value'),
+             Input({'type': 'cmnd-wait-minute', 'index': MATCH}, 'value'),
+             Input({'type': 'cmnd-wait-hour', 'index': MATCH}, 'value'),
+             Input({'type': 'cmnd-wait-day', 'index': MATCH}, 'value')],
             prevent_initial_call=True
         )
-        def display_then_wait(second, minute, hour, day):
+        def display_cmnd_wait(second, minute, hour, day):
             if None in (second, minute, hour, day):
                 return no_update
             return day * 86400 + hour * 3600 + minute * 60 + second
 
         @callback(
-            [Output({'type': 'then-wait-second', 'index': MATCH}, 'value'),
-             Output({'type': 'then-wait-minute', 'index': MATCH}, 'value'),
-             Output({'type': 'then-wait-hour', 'index': MATCH}, 'value'),
-             Output({'type': 'then-wait-day', 'index': MATCH}, 'value')],
-            Input({'type': 'then-wait-button', 'index': MATCH}, 'n_clicks'),
-            State({'type': 'then-value-input', 'index': MATCH}, 'value'),
+            [Output({'type': 'cmnd-wait-second', 'index': MATCH}, 'value'),
+             Output({'type': 'cmnd-wait-minute', 'index': MATCH}, 'value'),
+             Output({'type': 'cmnd-wait-hour', 'index': MATCH}, 'value'),
+             Output({'type': 'cmnd-wait-day', 'index': MATCH}, 'value')],
+            Input({'type': 'cmnd-wait-button', 'index': MATCH}, 'n_clicks'),
+            State({'type': 'cmnd-value-input', 'index': MATCH}, 'value'),
             prevent_initial_call=True
         )
-        def display_then_wait_(_, s):
+        def display_cmnd_wait_(_, s):
             if s is None:
                 return no_update
             h = s % 86400
@@ -241,7 +240,7 @@ class SceneThenClass(SceneIfClass):
             html.Div(
                 children=dcc.Input(
                     id={
-                        'type': 'then-value-input',
+                        'type': 'cmnd-value-input',
                         'index': self.index
                     },
                     type='number',
@@ -257,7 +256,7 @@ class SceneThenClass(SceneIfClass):
             ),
             html.Button("-->",
                 id={
-                    'type': 'then-wait-button',
+                    'type': 'cmnd-wait-button',
                     'index': self.index
                 },
                 style={'width': '55px', 'height': '35px'}
@@ -265,7 +264,7 @@ class SceneThenClass(SceneIfClass):
             html.Div(
                 children=dcc.Input(
                     id={
-                        'type': 'then-wait-day',
+                        'type': 'cmnd-wait-day',
                         'index': self.index
                     },
                     value=0,
@@ -280,7 +279,7 @@ class SceneThenClass(SceneIfClass):
             html.Div(
                 children=dcc.Dropdown(
                     id={
-                        'type': 'then-wait-hour',
+                        'type': 'cmnd-wait-hour',
                         'index': self.index
                     },
                     options=list(range(0, 24)),
@@ -294,7 +293,7 @@ class SceneThenClass(SceneIfClass):
             html.Div(
                 children=dcc.Dropdown(
                     id={
-                        'type': 'then-wait-minute',
+                        'type': 'cmnd-wait-minute',
                         'index': self.index
                     },
                     options=list(range(0, 60)),
@@ -308,7 +307,7 @@ class SceneThenClass(SceneIfClass):
             html.Div(
                 children=dcc.Dropdown(
                     id={
-                        'type': 'then-wait-second',
+                        'type': 'cmnd-wait-second',
                         'index': self.index
                     },
                     options=list(range(0, 60)),
@@ -327,7 +326,7 @@ class SceneThenClass(SceneIfClass):
             html.Div(
                 children=dcc.Dropdown(
                     id={
-                        'type': 'then-scene-dropdown',
+                        'type': 'cmnd-scene-dropdown',
                             'index': self.index
                         },
                     options=self.scenes,
@@ -339,23 +338,9 @@ class SceneThenClass(SceneIfClass):
             ),
             html.Div(
                 id={
-                    'type': 'then-scene-div',
+                    'type': 'cmnd-scene-div',
                     'index': self.index
                 },
                 style={'width': '145px'}
             )
         ]
-
-
-#if __name__ == '__main__':
-#    if_row = SceneIfClass()
-#    then_row = SceneThenClass()
-#    if_row.setup()
-#    then_row.setup()
-#    then_row.scenes = ['scene_test']
-#    print(if_row.create_row())
-#    print(then_row.create_row(3))
-#    print(if_row.create_row())
-#    print(then_row.create_row(2))
-
-

@@ -3,8 +3,8 @@
         "name": "LED_Controller",
         "uuid": "18FE34A2CD07",
         "topic": "LED_Controller",
-        "states": ["1", "4", "10"],
-        "commands": ["1", "4", "10"],
+        "stat": ["1", "4", "10"],
+        "cmnd": ["1", "4", "10"],
         "features": {
             "1": {
                 "name": "Свет в коридоре",
@@ -27,8 +27,8 @@
         "name": "Sonoff_4CH",
         "uuid": "6001948501B7",
         "topic": "Sonoff_4CH",
-        "states": ["POWER1", "POWER2", "POWER3", "TIME_OF_DAY", "TIME", "RF"],
-        "commands": ["POWER1", "POWER2", "POWER3", "RF"],
+        "stat": ["POWER1", "POWER2", "POWER3", "TIME_OF_DAY", "TIME", "RF"],
+        "cmnd": ["POWER1", "POWER2", "POWER3", "RF"],
         "features": {
             "POWER3": {
                 "name": "Свет в ванной",
@@ -67,8 +67,8 @@
         "name": "RF Switch",
         "uuid": "31110200d8f15b07e8b7",
         "topic": "Tuya/31110200d8f15b07e8b7",
-        "states": ["switch_1"],
-        "commands": ["switch_1"],
+        "stat": ["switch_1"],
+        "cmnd": ["switch_1"],
         "features": {
             "switch_1": {
                 "name": "Рэле",
@@ -96,7 +96,7 @@
                 "type": "float"
             }
         },
-        "states": [
+        "stat": [
             "battery_percentage",
             "temp_current",
             "humidity_value"
@@ -113,8 +113,8 @@
                 "type": "bool"
             }
         },
-        "states": ["switch_1"],
-        "commands": ["switch_1"]
+        "stat": ["switch_1"],
+        "cmnd": ["switch_1"]
     },
     {
         "name": "Датчик движения",
@@ -135,7 +135,7 @@
                 "type": "float"
             }
         },
-        "states": [
+        "stat": [
             "battery_percentage",
             "pir_state"
         ]
@@ -175,10 +175,10 @@
                 "type": "float"
             }
         },
-        "commands": [
+        "cmnd": [
             "switch_1", "child_lock", "countdown_1"
         ],
-        "states": [
+        "stat": [
             "switch_1",
             "child_lock",
             "countdown_1",
@@ -207,7 +207,7 @@
                 "type": "float"
             }
         },
-        "states": [
+        "stat": [
             "doorcontact_state",
             "temper_alarm",
             "battery_percentage"
@@ -232,7 +232,7 @@
                 "type": "float"
             }
         },
-        "states": [
+        "stat": [
             "battery_percentage",
             "pir_state"
         ]
@@ -271,10 +271,10 @@
                 "type": "float"
             }
         },
-        "commands": [
+        "cmnd": [
             "switch_1", "countdown_1"
         ],
-        "states": [
+        "stat": [
             "switch_1",
             "countdown_1",
             "cur_voltage",

@@ -59,7 +59,7 @@ def action_set(name, action):
 def cmnd_msg(message):
     action = message.topic.split('/')[-1]
     msg = json.loads(str(message.payload.decode("utf-8")))
-    print(msg)
+#    print(msg)
     name = msg.pop(0) if isinstance(msg, list) else msg
     action_set(name, action)
     if action not in ('delete', 'save'):

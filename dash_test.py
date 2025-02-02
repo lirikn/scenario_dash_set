@@ -7,7 +7,17 @@ from test_class import *
 
 actions = {}
 def send_msg(*args):
-    print(*args)
+    if args[0] == 'save':
+        actions[args[1][0]] = 'idle'
+    elif args[0] == 'delete':
+        del actions[args[1]]
+    elif args[0] == 'start':
+        actions[args[1]] = 'run'
+    elif args[0] in ('stop', 'activate'):
+        actions[args[1]] = 'idle'
+    elif args[0] == 'deactivate':
+        actions[args[1]] = 'deactivated'
+
 
 saves_json = 'saves.json'
 config_json = 'config.json'
@@ -26,8 +36,8 @@ then_class = SceneThenClass()
 def dyn_layout():
     with open(config_json) as json_file:
         devices = json.load(json_file)
-    if_class.setup(devices, 'states')
-    then_class.setup(devices, 'commands')
+    if_class.setup(devices)
+    then_class.setup(devices)
     then_class.scenes = sorted(actions.keys())
     return html.Div([
     dcc.Location(id='url', refresh=True),
@@ -60,12 +70,12 @@ def dyn_layout():
         style={'width': '560px'}
     ),
     html.Div(
-        id='if-row-container-div',
+        id='stat-row-container-div',
         children=[if_class.create_row()],
         style={'width': '560px'}
     ),
     html.Div(
-        id='then-row-container-div',
+        id='cmnd-row-container-div',
         children=[then_class.create_row()],
         style={'width': '560px'}
     )
@@ -82,17 +92,17 @@ app = Dash(
 app.layout = dyn_layout
 
 @callback(
-    Output({'type': 'then-scene-div', 'index': MATCH}, 'children'),
-    Input({'type': 'then-scene-dropdown', 'index': MATCH}, 'value'),
-    State({'type': 'then-scene-dropdown', 'index': MATCH}, 'id'),
+    Output({'type': 'cmnd-scene-div', 'index': MATCH}, 'children'),
+    Input({'type': 'cmnd-scene-dropdown', 'index': MATCH}, 'value'),
+    State({'type': 'cmnd-scene-dropdown', 'index': MATCH}, 'id'),
     prevent_initial_call=True
 )
-def display_then_scene(value, id_):
+def display_cmnd_scene(value, id_):
     if value is None:
         return
     return dcc.Dropdown(
         id={
-            'type': 'then-value-input',
+            'type': 'cmnd-value-input',
             'index': id_['index']
         },
         options=menu[2:],
@@ -104,9 +114,9 @@ def display_then_scene(value, id_):
 @callback(
     Output('save-delete-div', 'children'),
     [Input('scene-input', 'value'),
-     Input({'type': 'if-todo-dropdown', 'index': ALL}, 'value'),
-     Input({'type': 'if-value-input', 'index': ALL},'value'),
-     Input({'type': 'then-todo-dropdown', 'index': ALL},'options')],
+     Input({'type': 'stat-todo-dropdown', 'index': ALL}, 'value'),
+     Input({'type': 'stat-value-input', 'index': ALL},'value'),
+     Input({'type': 'cmnd-todo-dropdown', 'index': ALL},'options')],
     prevent_initial_call=True
 )
 def display_save_button(name, if_todos, if_values, then_todos):
@@ -119,16 +129,18 @@ def display_save_button(name, if_todos, if_values, then_todos):
             clearable=False,
             searchable=False,
             style={'width': '109px'}
-        ),
-        dcc.Interval(
-            id='interval-component',
-            interval=1*1000,
-            n_intervals=0
-    )]
+#        ),
+#        dcc.Interval(
+#            id='interval-component',
+#            interval=30*1000,
+#            n_intervals=0
+        )
+    ]
 
 @callback(
     Output('save-delete-dropdown', 'options'),
-    Input('interval-component', 'n_intervals'),
+#    Input('interval-component', 'n_intervals'),
+    Input('save-delete-div', 'n_clicks'),
     State('scene-input', 'value'),
     prevent_initial_call=True
 )
@@ -147,8 +159,8 @@ def save_delete_menu(_, name):
 
 @callback(
     [Output('scene-input', 'value'),
-     Output('if-row-container-div', 'children', allow_duplicate=True),
-     Output('then-row-container-div', 'children', allow_duplicate=True),
+     Output('stat-row-container-div', 'children', allow_duplicate=True),
+     Output('cmnd-row-container-div', 'children', allow_duplicate=True),
      Output('load-dropdown', 'value')],
     Input('load-dropdown', 'value'),
     prevent_initial_call=True,
@@ -162,15 +174,16 @@ def press_load_dropdown(name):
 
 @app.callback(
     Output("url", "href"),
+    Output('save-delete-dropdown', 'value'),
     Input("save-delete-dropdown", "value"),
     [State('scene-input', 'value'),
-     State('if-row-container-div', 'children'),
-     State('then-row-container-div', 'children')],
+     State('stat-row-container-div', 'children'),
+     State('cmnd-row-container-div', 'children')],
     prevent_initial_call=True,
 )
 def save_delete_dropdown(value, name, if_rows, then_rows):
     if value is None:
-        return no_update
+        return no_update, None
 
     if value == 'save':
         send_list = []
@@ -213,7 +226,7 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
     else:
         send_msg(value, name)
         if value != 'delete':
-            return no_update
+            return no_update, None
 
 #    with open(saves_json, 'r+') as json_file:
 #        saves = json.load(json_file)
@@ -228,7 +241,7 @@ def save_delete_dropdown(value, name, if_rows, then_rows):
 #            del saves[name]
 #        json_file.truncate(0)
 #        json.dump(saves, json_file, ensure_ascii=False, indent=4)
-    return "/"
+    return "/", None
 
 if __name__ == '__main__':
     app.run_server(debug=True, use_reloader=False)
